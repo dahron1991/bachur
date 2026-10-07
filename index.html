@@ -10,10 +10,10 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-Abgl2Pc/n0nRW33wS55ZwddeOZxu8SCQZ7E5HNuelo4=';
+  script-src 'sha256-XekjPca4Zfv4w58GnBqhlw6Om/4fxTtPs2SoM63R2GA=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
-  img-src 'self' data: https://qmmkalmixlsibfktdncq.supabase.co;
+  img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
   connect-src https://qmmkalmixlsibfktdncq.supabase.co https://www.hebcal.com;
   manifest-src 'self';
   base-uri 'none';
@@ -363,14 +363,25 @@ body{
 }
 #login.hide{opacity:0; pointer-events:none;}
 .login-card{width:100%; max-width:340px; text-align:center;}
+/* ברירת המחדל, כשאין ללוגו תמונה: עיגול עם האות הראשונה של שם
+   המשפחה. זה מה שרואה משפחה שעוד לא העלתה לוגו משלה. */
 .login-mark{
   width:88px; height:88px; margin:0 auto 18px; border-radius:50%;
   background:var(--wood); color:var(--cream); overflow:hidden;
   display:grid; place-items:center;
   font-family:var(--font-name); font-weight:700; font-size:36px;
 }
+/* וכשיש תמונה: היא תופסת את מלוא רוחב הכרטיס, בלי עיגול ובלי
+   רקע משלה. הגובה נגזר מהיחס של התמונה עצמה, ולכן היא לעולם
+   אינה נחתכת — object-fit:contain ולא cover. */
+.login-mark.has-logo{
+  width:100%; height:auto; border-radius:0;
+  background:none; margin:0 auto 20px; display:block;
+}
 .login-mark img{width:100%; height:100%; object-fit:cover;}
+.login-mark.has-logo img{width:100%; height:auto; object-fit:contain; display:block;}
 .login-card h1{font-family:var(--font-name); font-size:25px; margin:0 0 6px;}
+.login-card h1[hidden]{display:none;}
 .login-card p{font-size:14px; color:var(--ink-soft); margin:0 0 20px;}
 #loginPass{
   width:100%; font-family:var(--font-ui); font-size:17px; text-align:center;
@@ -993,10 +1004,14 @@ body{
    families לפי המשפחה שאליה נכנסו, ומולא באותם שדות בדיוק.
    ============================================================ */
 const FAMILY = {
-  name:    'משפחת כהן',
+  name:    'משפחת בחור',
   welcome: 'ברוכים הבאים לאילן היוחסין המשפחתי',
   hint:    'הזינו את הסיסמה שקיבלתם במשפחה',
-  logo:    '',      // כתובת תמונה. ריק — תוצג האות הראשונה של שם המשפחה
+  /* כתובת הלוגו. ריק — תוצג האות הראשונה של שם המשפחה בעיגול.
+     הכתובת כאן היא מה שרואה מי שנכנס בפעם הראשונה; אחרי הכניסה
+     היא נטענת מטבלת families ודורסת את מה שכאן. שתיהן צריכות
+     להצביע לאותו קובץ, אחרת הלוגו יקפוץ בין השתיים. */
+  logo:    'https://dahron1991.github.io/bachur/logo.jpg',
   passGuest: '',
   passAdmin: ''
 };
@@ -3537,9 +3552,17 @@ const loginBox = document.getElementById('login');
 function applyBranding(){
   const mark = document.getElementById('loginMark');
   const short = (FAMILY.name || '').split(' ').filter(Boolean).pop() || 'א';
-  if(FAMILY.logo) mark.innerHTML = imgTag(FAMILY.logo, 'alt=""');
-  else mark.textContent = short.charAt(0);
-  document.getElementById('loginName').textContent = FAMILY.name;
+  /* התמונה עוברת דרך imgTag, שמחזיר מחרוזת ריקה לכתובת שאינה
+     מוכרת. לכן נבדק מה באמת נכנס, ולא רק אם הוגדר לוגו — אחרת
+     כתובת פסולה הייתה משאירה ריבוע ריק במקום האות. */
+  const html = FAMILY.logo ? imgTag(FAMILY.logo, 'alt=""') : '';
+  if(html) mark.innerHTML = html;
+  else { mark.textContent = short.charAt(0); mark.innerHTML = mark.innerHTML; }
+  mark.classList.toggle('has-logo', !!html);
+  /* כשיש לוגו הוא נושא את שם המשפחה בתוכו, ושורת השם מיותרת */
+  const nameEl = document.getElementById('loginName');
+  nameEl.hidden = !!html;
+  nameEl.textContent = FAMILY.name;
   document.getElementById('loginWelcome').textContent = FAMILY.welcome;
   document.getElementById('loginPass').placeholder = FAMILY.hint;
   document.title = FAMILY.name;
