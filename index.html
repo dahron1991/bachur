@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-U3dNtoYetKRzFoD9/6cOuaKWZpabCdsECb7FaHPcn14=';
+  script-src 'sha256-3y0IaqBevSBJkBhmB8QsT9vvIMzkvWy/7+TONkPcetI=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -447,13 +447,15 @@ body{
   border-radius:10px; border-inline-start:3px solid var(--wood-soft); text-align:start;
 }
 
-/* ===== הצעת ההתקנה, בתחתית מסך הכניסה ===== */
+/* ===== הצעת ההתקנה, בתחתית מסך הכניסה =====
+   כפתור אחד וזהו. אין כאן שורת הסבר למה כדאי: הנימוק היחיד
+   האמיתי הוא שזה נפתח כמו אפליקציה ולא כאתר, וזה בדיוק מה
+   שהכפתור אומר. הכניסה נשמרת גם בדפדפן רגיל. */
 .install-box{width:100%; max-width:340px; margin:24px auto 0; text-align:center;}
-.ib-why{font-size:12.5px; line-height:1.55; color:var(--ink-soft); margin:0 0 10px;}
 .install-box .btn{width:100%; min-height:46px; font-size:14.5px;}
 .ib-how{
   font-size:12.5px; line-height:1.75; color:var(--ink-soft);
-  margin:0; padding:12px 13px; background:#F4EFE4; border-radius:10px;
+  margin:12px 0 0; padding:12px 13px; background:#F4EFE4; border-radius:10px;
   border-inline-start:3px solid var(--wood-soft); text-align:start;
 }
 .ib-how b{color:var(--ink);}
@@ -1227,9 +1229,7 @@ mark{
        כשהדפדפן מודיע שאפשר להתקין, ובאייפון — שבו אין הודעה כזאת
        ואין שום דרך לפתוח את ההתקנה מתוך דף — הוראה במקום כפתור. -->
   <div class="install-box" id="installBox" hidden>
-    <p class="ib-why">כדי שייפתח כמו אפליקציה, בלי שורת כתובת,
-      ושהכניסה תישמר.</p>
-    <button class="btn btn-ghost" id="installGo" hidden>הוספה למסך הבית</button>
+    <button class="btn btn-ghost" id="installGo">התקנה כאפליקציה</button>
     <p class="ib-how" id="installHow" hidden></p>
   </div>
 </div>
@@ -1279,7 +1279,7 @@ mark{
     <!-- דרך חזרה: מי שסגר את ההצעה במסך הכניסה לא רואה אותה שוב,
          כי מסך הכניסה מדולג אחרי הפעם הראשונה. הפריט הזה מופיע
          רק כשיש מה להתקין, ונעלם ברגע שהותקן. -->
-    <button class="chip" id="btnInstall" hidden>הוספה למסך הבית</button>
+    <button class="chip" id="btnInstall" hidden>התקנה כאפליקציה</button>
     <div class="admin-box" id="adminBox" hidden>
       <button class="chip" id="btnReq" hidden>בקשות</button>
       <button class="chip" id="btnEditMode">מצב עריכה</button>
@@ -1290,7 +1290,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 21:56</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 22:11</p>
   </div>
 </header>
 
@@ -6772,18 +6772,16 @@ const IOS_HOW =
   'גללו ובחרו <b>הוספה למסך הבית</b>.';
 
 /* מצב אחד, שתי נקודות תצוגה. נקרא גם אחרי התקנה וגם אחרי יציאה,
-   ולכן הוא מסתיר באותה מידה שהוא מציג. */
+   ולכן הוא מסתיר באותה מידה שהוא מציג.
+   אותו כפתור בשתי המערכות: באנדרואיד הוא פותח את ההתקנה עצמה,
+   ובאייפון — שבו אין ממשק כזה — הוא חושף את ההוראה. הכיתוב זהה
+   כי ההבטחה זהה; רק מספר הצעדים שונה. */
 function syncInstallUI(){
   const canPrompt = !!installEvent;
-  const iosHint   = IS_IOS && !isStandalone() && !isInApp();
-  const show      = !isStandalone() && !isInApp() && (canPrompt || iosHint);
+  const show = !isStandalone() && !isInApp() && (canPrompt || IS_IOS);
   if(installBox){
     installBox.hidden = !show;
-    if(installGo)  installGo.hidden  = !canPrompt;
-    if(installHow){
-      installHow.hidden = !(show && !canPrompt);
-      if(!installHow.hidden) installHow.innerHTML = IOS_HOW;
-    }
+    if(!show && installHow) installHow.hidden = true;
   }
   if(btnInstall) btnInstall.hidden = !show;
 }
@@ -6809,11 +6807,15 @@ async function runInstall(){
   syncInstallUI();
   return true;
 }
-if(installGo) installGo.onclick = runInstall;
+if(installGo) installGo.onclick = async () => {
+  if(await runInstall()) return;
+  installHow.innerHTML = IOS_HOW;        // אייפון: אין מה להפעיל, יש מה להסביר
+  installHow.hidden = false;
+};
 if(btnInstall) btnInstall.onclick = async () => {
   closeMore();
   if(await runInstall()) return;
-  openPanel('הוספה למסך הבית', '<p class="note">' + IOS_HOW + '</p>');
+  openPanel('התקנה כאפליקציה', '<p class="note">' + IOS_HOW + '</p>');
 };
 
 /* ---------- הנעילה בדפדפן פנימי ---------- */
