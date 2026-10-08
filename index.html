@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-XekjPca4Zfv4w58GnBqhlw6Om/4fxTtPs2SoM63R2GA=';
+  script-src 'sha256-2d9EdB/cq0Yuxbra7zSvH4Fs4b7EpwZzJ0DVd4SF59U=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -189,8 +189,10 @@ body{
   border:2px solid var(--g0);
   border-radius:var(--r-card);
   box-shadow:var(--shadow-card);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:10px 6px;
+  /* הכרטיס נשאר 104×132 בדיוק. התמונה תופסת את כל הרוחב במקום
+     עיגול ממורכז, ולכן אין כאן ריפוד ואין מרכוז — רצועה, קו, שם. */
+  display:flex; flex-direction:column;
+  overflow:hidden;
   cursor:pointer;
   transition:box-shadow .16s, transform .16s;
 }
@@ -213,17 +215,6 @@ body{
 @keyframes hold{from{opacity:0; transform:scale(1.07);} to{opacity:.85; transform:scale(1);}}
 @media (prefers-reduced-motion:reduce){ .node.pressing::after{animation:none; opacity:.5;} }
 
-.avatar{
-  width:58px; height:58px; border-radius:50%;
-  display:grid; place-items:center;
-  font-family:var(--font-name); font-weight:700; font-size:23px; color:#fff;
-  border:2.5px solid var(--paper);
-  outline:2.5px solid currentColor;
-  margin-bottom:10px;
-}
-.node[data-gender="male"]   .avatar{background:var(--male);   color:var(--male);}
-.node[data-gender="female"] .avatar{background:var(--female); color:var(--female);}
-.avatar span{color:#fff;}
 /* מסך "העץ ריק" — הנקודה היחידה שממנה אפשר להתחיל עץ חדש */
 #empty{
   position:fixed; inset:0; z-index:12; display:grid; place-items:center;
@@ -273,21 +264,41 @@ body{
   color:#F3EADA; margin:0; text-align:center;
 }
 #cropper h3 span{display:block; font-size:12.5px; font-weight:400; color:#B9AC98; margin-top:5px;}
+/* המסגרת היא מה שנשמר — 5:3. שלוש הצורות חולקות גובה אחד:
+   העיגול הוא הריבוע שבמרכז, הכרטיס שבעץ רחב ממנו מעט, והמסגרת
+   כולה היא כרטיס האדם. די בכלל אחד למי שמעלה: הפנים בעיגול. */
 .crop-frame{
   position:relative; overflow:hidden; flex:none;
-  border-radius:50%; background:#1C1611;
+  border-radius:6px; background:#1C1611;
   box-shadow:0 0 0 2px rgba(243,234,218,.55);
   touch-action:none; cursor:grab;
 }
+.crop-guide{position:absolute; inset:0; pointer-events:none;}
+.crop-guide span{position:absolute; display:block;}
+/* ההצללה רכה ונמוגה פנימה. שני מלבנים כהים בקו חד נראו רע. */
+.crop-guide .g-dim{top:0; bottom:0;}
+.crop-guide .g-dim.l{left:0;
+  background:linear-gradient(to right, rgba(20,15,11,.42), rgba(20,15,11,.12) 50%, rgba(20,15,11,0));}
+.crop-guide .g-dim.r{right:0;
+  background:linear-gradient(to left, rgba(20,15,11,.42), rgba(20,15,11,.12) 50%, rgba(20,15,11,0));}
+.crop-guide .g-card{top:0; bottom:0;
+  border-left:1.5px dashed rgba(255,252,246,.8); border-right:1.5px dashed rgba(255,252,246,.8);}
+.crop-guide .g-circle{top:0; border-radius:50%; border:2px solid rgba(255,252,246,.95);
+  box-sizing:border-box;}
+.crop-legend{
+  display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+  margin:0; font-size:11.5px; color:#B9AC98; max-width:min(84vw,360px); text-align:center;
+}
+.crop-legend i{display:inline-block; width:16px; vertical-align:middle; margin-inline-end:5px;}
 .crop-frame.dragging{cursor:grabbing;}
 .crop-frame img{
   position:absolute; top:0; left:0; transform-origin:0 0;
   max-width:none; max-height:none; pointer-events:none; -webkit-user-drag:none;
 }
-.crop-zoom{width:min(78vw,320px); display:flex; align-items:center; gap:12px;}
+.crop-zoom{width:min(84vw,340px); display:flex; align-items:center; gap:12px;}
 .crop-zoom input{flex:1; accent-color:#C8A86B; height:30px;}
 .crop-zoom b{color:#B9AC98; font-size:16px; font-weight:700; width:16px; text-align:center;}
-.crop-acts{display:flex; gap:10px; width:min(78vw,320px);}
+.crop-acts{display:flex; gap:10px; width:min(84vw,340px);}
 .crop-acts button{
   flex:1; border-radius:12px; padding:13px 0; cursor:pointer;
   font-family:var(--font-ui); font-size:15.5px; font-weight:700; border:1.5px solid transparent;
@@ -300,17 +311,37 @@ body{
    height:100% בתוך grid עם שורה אוטומטית, ונופל ליחס הטבעי של
    התמונה. תמונה לאורך הייתה אז גולשת מהעיגול ודורסת את השם.
    הכלל הזה תופס כל עיגול תמונה באפליקציה. */
-.avatar img, .dot img, .photo-pick .prev img, .big-avatar img{
+.dot img, .photo-pick .prev img, .big-avatar img{
   align-self:stretch; justify-self:stretch;
   width:100%; height:100%; min-width:0; min-height:0;
   object-fit:cover; display:block;
 }
-.avatar img{border-radius:50%;}
-.avatar, .dot, .big-avatar{overflow:hidden;}
+.dot, .big-avatar{overflow:hidden;}
 
+/* רצועת התמונה: כל רוחב הכרטיס, 86 מתוך 128 הפנימיים.
+   מה שנשאר — 39 — הוא שתי שורות שם בדיוק. */
+.node .face{
+  height:86px; flex:none; position:relative; overflow:hidden;
+  display:grid; place-items:center;
+  font-family:var(--font-name); font-weight:700; font-size:40px; color:#fff;
+  background:var(--wood-soft);
+}
+.node .face img{width:100%; height:100%; object-fit:cover; display:block;}
+.node .face span{color:#fff;}
+.node[data-gender="male"]   .face{background:var(--male);}
+.node[data-gender="female"] .face{background:var(--female);}
+/* המגדר נקרא מקו דק בין התמונה לשם. בלי התמונה בעיגול, זה
+   הסימון היחיד שנשאר — ולכן הוא לא יכול להיות דק מזה. */
+.node .sexline{height:3px; flex:none; background:var(--wood-soft);}
+.node[data-gender="male"]   .sexline{background:var(--male);}
+.node[data-gender="female"] .sexline{background:var(--female);}
 .node .name{
+  flex:1; min-height:0; padding:0 5px;
+  display:flex; align-items:center; justify-content:center;
   font-family:var(--font-name); font-weight:700; font-size:15px;
   line-height:1.15; text-align:center; color:var(--ink);
+}
+.node .name span{
   /* שם ארוך במיוחד — שם משפחה כפול, או הדבקה בטעות — גלש אל מחוץ
      לכרטיס וכיסה את השכנים. כאן הוא נשבר בתוך המילה אם צריך,
      ונחתך אחרי שתי שורות. */
@@ -331,7 +362,8 @@ body{
 
 /* ממלא מקום — רשומה שנוצרה כשאדם נמחק, כדי לשמור על הענף */
 .node[data-ph]{border-color:var(--wood-soft); background:#F6F1E7;}
-.node[data-ph] .avatar{background:var(--wood-soft) !important; color:var(--wood-soft) !important;}
+.node[data-ph] .face{background:var(--wood-soft) !important;}
+.node[data-ph] .sexline{background:var(--wood-soft) !important;}
 .node[data-ph] .name{color:var(--ink-soft); font-style:italic;}
 
 /* כרטיס כפיל — אותו אדם שמוצג גם בענף אחר.
@@ -488,13 +520,32 @@ body{
 
 /* ===== פרטים נוספים, שורה כפולה, ופתקים ===== */
 .extra-gap{height:26px;}
+/* "עוד פרטים": קיפול שכתוב מתחתיו מה יש בפנים. קיפול בלי רשימה
+   נראה כאילו הוסתר משהו. */
+.fold{
+  width:100%; margin:4px 0 14px; background:none; cursor:pointer;
+  border:none; border-top:1px solid #EDE2D0; border-bottom:1px solid #EDE2D0;
+  padding:13px 0; font-family:var(--font-ui); text-align:start;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.fold .t{display:block; font-size:14.5px; font-weight:700; color:var(--ink);}
+.fold .s{display:block; font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+.fold svg{flex:none; transition:transform .2s;}
+.fold[aria-expanded="true"]{border-bottom:none; margin-bottom:0;}
+.fold[aria-expanded="true"] svg{transform:rotate(180deg);}
+/* [hidden] לבדו אינו מנצח display:grid, ולכן הכלל המפורש */
+.fold-body[hidden]{display:none;}
+.fold-body{
+  background:#FDF9F0; border-bottom:1px solid #EDE2D0;
+  margin:0 -6px 14px; padding:14px 6px 2px;
+}
 /* רשת של שתי עמודות. הכול תופס רוחב מלא חוץ מהשדות המסומנים
    כחצאים, ושני חצאים רצופים יושבים זה לצד זה.
    קודם זה היה flex בעמודה, ולכן inline-block על החצאים לא השפיע
    כלל: הם נערמו זה מעל זה, כל אחד בחצי רוחב. */
-.form-fields{display:grid; grid-template-columns:1fr 1fr; column-gap:10px;}
-.form-fields > *{grid-column:1 / -1; min-width:0;}
-.field.half{grid-column:auto;}
+.form-fields, .fold-body{display:grid; grid-template-columns:1fr 1fr; column-gap:10px;}
+.form-fields > *, .fold-body > *{grid-column:1 / -1; min-width:0;}
+.field.half, .field.col{grid-column:auto;}
 .field.half label{font-size:11.5px;}
 .field.half input{font-size:14px; padding:10px 11px;}
 .notes-wrap{margin-top:4px;}
@@ -558,20 +609,27 @@ body{
 .note-confirm .yes{border-color:var(--clay); color:var(--clay);}
 
 /* ===== בוחר תמונה ===== */
-.photo-pick{display:flex; align-items:center; gap:14px;}
-.photo-pick .prev{
-  width:66px; height:66px; border-radius:50%; flex:none;
-  display:grid; place-items:center; color:#fff;
-  font-family:var(--font-name); font-weight:700; font-size:26px;
-  background:var(--wood-soft); overflow:hidden;
+/* התמונה ביחס שבו היא נשמרת (5:3), ולא עיגול קטן: מי שמעלה
+   רואה מראש את מה שיתקבל. */
+.photo-wide .prev{
+  display:grid; place-items:center; width:100%; aspect-ratio:5 / 3;
+  border:2px dashed var(--wood-soft); border-radius:14px;
+  background:var(--cream); color:var(--wood); overflow:hidden;
+  padding:0; cursor:pointer; font-family:var(--font-ui);
 }
-.photo-pick .prev img{width:100%; height:100%; object-fit:cover;}
-.photo-pick .acts{display:flex; flex-direction:column; gap:6px;}
-.photo-pick button{
-  border:1.5px solid #E3D6C0; background:var(--cream); color:var(--wood);
-  border-radius:10px; padding:9px 14px; font-family:var(--font-ui);
+.photo-wide .prev b{display:block; font-size:16px; font-weight:700; color:var(--wood);}
+.photo-wide .prev svg{display:block; margin:0 auto 10px; color:var(--wood-soft);}
+.photo-wide .prev img{width:100%; height:100%; object-fit:cover; display:block;}
+.photo-wide .prev:has(img){border-style:solid; border-color:transparent;}
+.photo-wide .acts{display:flex; gap:10px; margin-top:10px;}
+.photo-wide button:not(.prev){
+  flex:1; border:1.5px solid #E3D6C0; background:var(--cream); color:var(--wood);
+  border-radius:10px; padding:11px 14px; font-family:var(--font-ui);
   font-size:13.5px; font-weight:700; cursor:pointer;
 }
+.photo-wide button.cut{color:var(--clay);}
+.photo-wide button[hidden]{display:none;}
+.photo-hint{text-align:center; margin-top:10px;}
 .admin-row{display:flex; gap:10px; margin-top:18px;}
 .admin-row .btn{min-height:44px; font-size:14px;}
 
@@ -596,7 +654,7 @@ body{
   border:none; background:#F0E6D6; color:var(--wood);
   width:34px; height:34px; border-radius:50%; font-size:19px; cursor:pointer;
 }
-.panel-body{flex:1; overflow-y:auto; padding:16px 20px 24px; -webkit-overflow-scrolling:touch;}
+.panel-body{flex:1; overflow-y:auto; padding:16px 20px 88px; -webkit-overflow-scrolling:touch;}
 
 /* מתג לועזי / עברי */
 .seg{display:flex; background:#F0E6D6; border-radius:11px; padding:3px; margin-bottom:16px;}
@@ -619,14 +677,36 @@ body{
   display:grid; place-items:center; color:#fff;
   font-family:var(--font-name); font-weight:700; font-size:17px;
 }
+/* מגדר: היום הצבע נמצא רק ברקע העיגול, ולכן מי שיש לו תמונה —
+   אין לו סימון כלל. הטבעת גלויה בשני המקרים. */
+.prow .dot.gring{outline:2px solid currentColor; outline-offset:2px;}
+/* מסך "לא נמצא" הוא ההזדמנות הטבעית להוסיף */
+.search-add{margin-top:4px; padding-top:18px; border-top:1px dashed #E6DBC8;}
+.search-add p{margin:0 0 12px; font-size:13px; font-weight:700; color:var(--ink-soft);}
+.search-add .btn{width:100%;}
+/* ימי הולדת: הפרדה בין החודש הקרוב לשאר השנה */
+.bday-h{
+  margin:18px 2px 7px; font-size:12px; font-weight:700;
+  letter-spacing:.04em; color:var(--ink-soft);
+}
+.bday-h:first-child{margin-top:2px;}
+.bday-scope{margin:9px 2px 0; font-size:12px; color:var(--ink-soft);}
+mark{
+  background:rgba(46,93,69,.14); color:var(--forest);
+  border-radius:3px; padding:0 1px; font-weight:700;
+}
 .prow .who{flex:1; min-width:0;}
 .prow .who b{display:block; font-size:15px; font-weight:700; color:var(--ink);}
 .prow .who span{font-size:12.5px; color:var(--ink-soft);}
+.prow .who .meta{display:block; font-size:11.5px; color:var(--wood-soft); margin-top:2px;}
 .prow .cnt{
-  flex:none; font-size:12px; font-weight:700; color:var(--forest);
-  background:#E8F0EA; border-radius:999px; padding:5px 10px; white-space:nowrap;
+  /* ברירת המחדל שקטה. מה שרחוק אינו צריך צבע — הוא רק נתון. */
+  flex:none; font-size:12px; font-weight:700; color:var(--ink-soft);
+  background:#F2EADC; border-radius:999px; padding:5px 10px; white-space:nowrap;
 }
-.prow .cnt.soon{background:#F6E7D8; color:var(--wood);}
+/* ירוק ולא כתום: כתום נקרא כאזהרה, ויום הולדת אינו אזהרה.
+   מוחל רק מעשרה ימים ומטה. */
+.prow .cnt.soon{background:#E8F0EA; color:var(--forest);}
 .prow .cnt.edit{background:#F0E6D6; color:var(--wood);}
 .prow .cnt b{display:block; font-weight:400; font-size:10.5px; opacity:.85; margin-top:2px;}
 .prow .cnt.new {background:#E8F0EA; color:var(--forest);}
@@ -678,6 +758,17 @@ body{
 }
 .pick button.on{border-color:var(--forest); background:#E8F0EA; color:var(--forest);}
 .pick button.cut{color:var(--clay);}
+/* בורר אחד במקום שני כפתורים נפרדים: גם מראה מה נבחר, וגם תופס
+   פחות. חל רק על המגדר — שאר הבוררים נשארים כפי שהם. */
+.pick.two{background:#F0E6D6; border-radius:12px; padding:4px; gap:5px;}
+.pick.two button{
+  border:none; background:none; border-radius:9px; padding:11px 0;
+  color:var(--ink-soft); font-weight:400;
+}
+.pick.two button.on{
+  background:var(--paper); color:var(--ink); font-weight:700;
+  box-shadow:0 1px 2px rgba(122,83,52,.14);
+}
 .pick button.cut.on{border-color:var(--clay); background:#FBF2EF; color:var(--clay);}
 .ustat{flex-wrap:wrap;}
 .ustat button{flex:1 1 40%;}
@@ -686,7 +777,10 @@ body{
   width:100%; text-align:start; background:var(--cream);
   border:1.5px dashed var(--wood-soft); border-radius:11px;
   padding:12px 13px; font-family:var(--font-ui); font-size:15px; color:var(--ink); cursor:pointer;
+  margin-bottom:14px;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
 }
+.anchor-btn .swap{flex:none; font-size:13px; font-weight:700; color:var(--forest);}
 .form-actions{display:flex; gap:10px; padding-top:6px;}
 /* דוח הייבוא */
 .imp-report{margin:2px 0 10px;}
@@ -790,16 +884,15 @@ body{
 .grab{padding:10px 0 4px; display:grid; place-items:center; touch-action:none; cursor:grab;}
 .grab i{display:block; width:44px; height:5px; border-radius:3px; background:var(--wood-soft);}
 
-.sheet-body{overflow-y:auto; padding:6px 20px 20px; -webkit-overflow-scrolling:touch;}
+/* ההודעה הצפה יושבת 26 פיקסלים מהתחתית ומסתירה את השורה שמתחתיה.
+   היא חולפת, אבל בזמן שהיא שם המידע נעלם — ולכן נשמר לה מקום
+   בסוף הגלילה. */
+.sheet-body{overflow-y:auto; padding:6px 20px 84px; -webkit-overflow-scrolling:touch;}
 
 .sheet-top{display:flex; justify-content:space-between; align-items:center; padding:2px 0 8px;}
 .hero{
   display:flex; flex-direction:column; align-items:center;
   text-align:center; gap:14px; padding-bottom:18px;
-}
-.hero .avatar{
-  width:175px; height:175px; font-size:70px; margin:0; flex:none;
-  border-width:4px; outline-width:4px;
 }
 .hero h2{font-family:var(--font-name); font-size:24px; font-weight:700; margin:0 0 4px;
   overflow-wrap:anywhere; word-break:break-word;}
@@ -807,8 +900,8 @@ body{
 .hero-text{width:100%;}
 .stats-tg{
   display:flex; align-items:center; justify-content:center; gap:5px;
-  margin:9px auto 0; padding:9px 0 3px; font:inherit; font-size:12.5px;
-  width:100%; border:none; border-top:1px solid #F2EADC;
+  margin:14px auto 0; padding:13px 0; font:inherit; font-size:14px;
+  width:100%; border:none; border-top:1px solid #EDE2D0; border-bottom:1px solid #EDE2D0;
   background:none; color:var(--ink-soft); cursor:pointer;
 }
 .stats-tg svg{display:block; transition:transform .2s; flex:none;}
@@ -836,6 +929,153 @@ body{
 }
 .facts dd.muted{font-weight:400; color:var(--ink-soft);}
 
+/* ===== כותרת הכרטיס: רצועת תמונה ברוחב מלא =====
+   הרצועה שוברת את ריפוד הגוף (6/20/20) במכוון, ולכן השוליים
+   השליליים. היחס הוא 5:3 — בדיוק מה שהקרופר שומר. */
+.hero-wide{
+  position:relative; margin:-6px -20px 0;
+  /* width:100% אינו קישוט. בלעדיו הרוחב אינו "מוחלט", ואז
+     min-height גובר: הדפדפן קובע גובה 200, מכפיל ב-5/3 ומקבל
+     רוחב 333 — בטלפון של 320 הרצועה גלשה מהמסך וגררה גלילה
+     אופקית. עם רוחב מוחלט, היחס קובע את הגובה ו-min-height רק
+     מרים אותו. */
+  width:100%; box-sizing:border-box;
+  aspect-ratio:5 / 3; min-height:200px;
+  /* רקע כהה ולא בהיר: הטקסט הלבן יושב עליו, ושכבת ההחשכה שמעל
+     התמונה היא rgba — כלומר אם התמונה בהירה והרקע בהיר, אין שום
+     ערובה לקריאוּת. מכאן הבסיס כהה בעצמו. */
+  background:#2A2119; overflow:hidden;
+  display:flex; align-items:flex-end;
+}
+.hero-wide .shot{position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; display:block;}
+/* תמונה ריבועית שהועלתה לפני השינוי: ממורכזת, על עותק מטושטש
+   של עצמה. בלי זה היא הייתה נמתחת או מותירה פסים ריקים. */
+.hero-wide .blur{position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; filter:blur(22px) saturate(.7) brightness(.72);
+  transform:scale(1.14); display:block;}
+.hero-wide .shade{
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(to top, rgba(22,16,10,.92) 0%,
+             rgba(22,16,10,.42) 42%, rgba(22,16,10,0) 74%);
+}
+.hero-wide .letter{
+  position:absolute; inset:0; display:grid; place-items:center;
+  font-family:var(--font-name); font-weight:700; font-size:92px;
+  color:rgba(255,252,246,.9);
+}
+.hero-wide .cap{position:relative; width:100%; padding:0 22px 16px;}
+.hero-wide h2{
+  font-family:var(--font-name); font-size:27px; font-weight:700; color:#FFFCF6;
+  margin:0 0 4px; line-height:1.16; overflow-wrap:anywhere; word-break:break-word;
+}
+.hero-wide .sub{font-size:13.5px; color:#F0E7D8; margin:0; line-height:1.5;}
+.hero-wide h2 .maiden{font-size:14px; font-weight:400; color:#F0E7D8;}
+.hero-min h2 .maiden{font-size:14px; font-weight:400; color:var(--ink-soft);}
+.sheet-top.over{
+  position:absolute; inset-inline:14px; top:14px; z-index:2; padding:0;
+}
+/* אטום לגמרי ולא .93: בשקיפות חלקית הסימן נמדד מול הרקע הכהה
+   של הרצועה, והניגודיות שלו צונחת ל-1.1 */
+.sheet-top.over .panel-x{background:var(--paper); color:var(--ink);}
+
+/* מי שאין לו תמונה — שורה אחת עם מדליון, בלי רצועה ריקה */
+.hero-min{display:flex; align-items:center; gap:15px; padding:8px 0 2px;}
+.hero-min .medal{
+  width:76px; height:76px; flex:none; border-radius:50%;
+  display:grid; place-items:center; color:#fff;
+  font-family:var(--font-name); font-weight:700; font-size:32px;
+  box-shadow:0 0 0 3px var(--paper), 0 0 0 5px currentColor;
+}
+.hero-min .medal span{color:#fff;}
+.hero-min .txt{min-width:0;}
+.hero-min h2{font-family:var(--font-name); font-size:26px; font-weight:700;
+  margin:0 0 3px; line-height:1.15; overflow-wrap:anywhere; word-break:break-word;}
+.hero-min .sub{font-size:13.5px; color:var(--ink-soft); margin:0; line-height:1.5;}
+
+/* עובדות כתגיות. מה שאין פשוט לא נוצר. */
+.chips{display:flex; flex-wrap:wrap; gap:7px; padding:15px 0 0;}
+.chips span{
+  font-size:13px; background:#F2EBE4; border:1px solid #E3D8CC;
+  color:#5E4E3E; border-radius:999px; padding:6px 12px;
+}
+
+/* ===== המחברת: דף אחד מתמשך לכל הפתקים ===== */
+.sec-h{font-family:var(--font-name); font-size:19px; font-weight:700; margin:0 0 10px;}
+.notes-sec{padding-top:20px;}
+.notebook{
+  border:1px solid #E8DECA; border-radius:4px 14px 14px 4px;
+  background-color:#FFFDF7;
+  background-image:
+    linear-gradient(to left, transparent 0 33px, #E8C4B6 33px 34px, transparent 34px),
+    repeating-linear-gradient(to bottom, transparent 0 27px, #EAE2CF 27px 28px);
+  background-position:0 0, 0 18px;
+  padding:18px 46px 16px 18px;
+  box-shadow:0 1px 0 #F2E9D8;
+}
+.nb-text{
+  margin:0; font-size:15px; line-height:28px; color:var(--ink);
+  white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+}
+/* מילה ראשונה מודגשת ולא אות פתיחה מוגדלת: אות גדולה הייתה
+   שוברת את יישור השורות, וכל הרעיון הוא שהטקסט יושב על הקווים. */
+.nb-text b{font-family:var(--font-name); font-weight:700; color:var(--wood);}
+/* #A08E78 נתן ניגודיות 3.11 על נייר המחברת — מתחת לסף. ומי
+   שחתום על הפתק הוא בדיוק מי שרוצים לזהות. */
+.nb-by{margin:0; font-size:12.5px; line-height:28px; color:#80705A;}
+.nb-gap{height:28px;}
+/* המחברת כשכותבים בה. פתוחה במכוון — בלי מסגרת ובלי פינות — כדי
+   שתיקרא כהמשך של אותו דף שבכרטיס, ולא כתיבת טקסט. */
+.nb-form{
+  margin:26px 0 0; padding:0 34px 0 4px;
+  background-image:
+    linear-gradient(to left, transparent 0 25px, #E8C4B6 25px 26px, transparent 26px),
+    repeating-linear-gradient(to bottom, transparent 0 27px, #EAE2CF 27px 28px);
+  background-position:0 0, 0 20px;
+}
+.nb-form textarea{
+  width:100%; box-sizing:border-box; display:block;
+  border:none; background:none; outline:none; resize:none; overflow:hidden;
+  font-family:var(--font-name); font-size:16px; line-height:28px; color:var(--ink);
+  padding:28px 0 0;                      /* שורה ריקה אחת לפני הכתיבה */
+}
+.nb-form textarea::placeholder{color:#C3B49C;}
+/* שתי שורות ריקות ואז החתימה, מוזחת פנימה מקו השוליים */
+.nb-sign{display:flex; align-items:flex-end; gap:9px; height:84px; padding:0 44px 3px 0;}
+.nb-sign span{font-size:12.5px; color:var(--ink-soft); line-height:25px; flex:none;}
+.nb-sign input{
+  flex:1; min-width:0; height:25px; padding:0;
+  border:none; background:none; outline:none;
+  font-family:var(--font-name); font-size:16px; line-height:25px; color:var(--wood);
+}
+.nb-sign input::placeholder{color:#C3B49C;}
+.nb-sign.bad span{color:var(--clay);}
+.nb-sign.bad input::placeholder{color:#C08478;}
+.hero-wide.inform{margin:16px 0 0; border-radius:14px;}
+/* שורה שאומרת לאן הדבר הולך. מתחת לכל כפתור אישור סופי של אורח. */
+.send-note{
+  margin:10px 0 0; font-size:12.5px; line-height:1.6;
+  color:var(--ink-soft); text-align:center;
+}
+.nb-add{display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:16px;}
+.nb-add p{margin:0; font-size:12.5px; color:var(--ink-soft); text-align:center;}
+.btn-pill{
+  font-family:var(--font-ui); font-size:14.5px; font-weight:700; color:#fff;
+  background:var(--forest); border:none; border-radius:999px;
+  padding:12px 24px; cursor:pointer;
+}
+.btn-pill:active{background:#22452F;}
+
+/* פרטי תקשורת — בתחתית, מתחת לפתקים */
+.contact-end{margin-top:26px; padding-top:16px; border-top:1px solid #F0E7D8;}
+.contact-end h3{
+  font-size:12px; font-weight:700; letter-spacing:.04em;
+  color:var(--ink-soft); margin:0 0 9px;
+}
+.contact-end .ce{display:flex; gap:8px; font-size:13.5px; margin-bottom:5px;}
+.contact-end .ce b{font-weight:400; color:var(--ink-soft); min-width:46px; flex:none;}
+.contact-end .ce a{color:var(--wood); overflow:hidden; text-overflow:ellipsis;}
+
 .sheet-actions{display:flex; gap:10px; padding:18px 0 4px;}
 .btn{
   flex:1; min-height:50px; border-radius:13px; border:none;
@@ -862,6 +1102,15 @@ body{
   transition:opacity .22s, transform .22s;
 }
 #toast.show{opacity:1; transform:translateY(0);}
+/* כשחלון תחתון פתוח, התחתית היא אזור קריאה: ההודעה ישבה בדיוק על
+   שורה של פתק. למעלה יש את הכותרת או רצועת התמונה, ושם היא לא
+   מסתירה טקסט. הכיוון מתהפך גם באנימציה, אחרת היא נכנסת מלמטה
+   אל מקום עליון. */
+#toast.top{
+  bottom:auto; top:calc(env(safe-area-inset-top) + 18px);
+  transform:translateY(-14px);
+}
+#toast.top.show{transform:translateY(0);}
 
 :focus-visible{outline:3px solid var(--forest); outline-offset:2px;}
 </style>
@@ -899,7 +1148,7 @@ body{
     <button class="chip" id="btnSearch">חיפוש</button>
     <button class="chip" id="btnBday">ימי הולדת</button>
     <button class="chip" id="btnEditReq" hidden>בקשת עריכה</button>
-    <button class="chip" id="btnNoteReq" hidden>הוספת סיפור</button>
+    <button class="chip" id="btnNoteReq" hidden>הוספת פתק</button>
     <button class="chip" id="btnAll">פריסה מלאה</button>
     <button class="chip" id="btnCenter">מרכוז</button>
     <div class="admin-box" id="adminBox" hidden>
@@ -942,8 +1191,19 @@ body{
 <div id="lightbox"><div class="big-avatar" id="bigAvatar"></div></div>
 
 <div id="cropper">
-  <h3>התאמת התמונה<span>גררו למיקום, והשתמשו במחוון כדי להתקרב</span></h3>
-  <div class="crop-frame" id="cropFrame"><img id="cropImg" alt=""></div>
+  <h3>חיתוך התמונה<span>גררו והתקרבו כך שהפנים יהיו בתוך העיגול. כל השאר ייחתך לפי המקום.</span></h3>
+  <div class="crop-frame" id="cropFrame"><img id="cropImg" alt="">
+    <div class="crop-guide" aria-hidden="true">
+      <span class="g-dim l" id="gDimL"></span><span class="g-dim r" id="gDimR"></span>
+      <span class="g-card" id="gCard"></span>
+      <span class="g-circle" id="gCircle"></span>
+    </div>
+  </div>
+  <p class="crop-legend">
+    <span><i style="border-top:2px solid #F3EADA"></i>העיגול — ברשימות</span>
+    <span><i style="border-top:1.5px dashed #B9AC98"></i>הכרטיס שבעץ</span>
+    <span>המסגרת כולה — כרטיס האדם</span>
+  </p>
   <div class="crop-zoom"><b>−</b><input type="range" id="cropZoom" min="100" max="400" value="100"><b>+</b></div>
   <div class="crop-acts">
     <button id="cropOk">שמירה</button>
@@ -1099,7 +1359,7 @@ const SERVER_MSG = [
   ['people_death_check',     'תאריך הפטירה אינו בתצורה נכונה. אפשר שנה בלבד'],
   ['people_name_check',      'צריך למלא שם פרטי'],
   ['people_gender_check',    'צריך לבחור מגדר'],
-  ['notes_text_check',       'הסיפור ריק'],
+  ['notes_text_check',       'הפתק ריק'],
   ['unions_status_check',    'סטטוס הזוגיות אינו מוכר'],
   ['partners_differ',        'אי אפשר לקשר אדם לעצמו'],
   ['requests_kind_check',    'סוג הבקשה אינו מוכר'],
@@ -1661,7 +1921,7 @@ function cleanPayload(raw){
 
 function rowToReq(row){
   const base = {id: row.id, by: String(row.submitted_by || '').slice(0, 80),
-                ver: row.updated_at};
+                at: row.created_at, ver: row.updated_at};
   const pay = cleanPayload(row.payload);
   if(row.kind === 'add')
     return Object.assign(base, {kind: row.relation || 'child',
@@ -2196,8 +2456,9 @@ function buildNode(key){
   el.innerHTML =
     (isGhost ? '<span class="mirror" title="מופיע/ה גם במקום אחר בעץ">⧉</span>' : '') +
     (FLOATING.has(key) ? '<span class="floatmark" title="לא מחובר/ת לעץ">!</span>' : '') +
-    '<div class="avatar">' + avatarInner(p) + '</div>' +
-    '<div class="name">' + esc(p.name) + '</div>';
+    '<div class="face">' + avatarInner(p) + '</div>' +
+    '<div class="sexline"></div>' +
+    '<div class="name"><span>' + esc(p.name) + '</span></div>';
   nodesEl.appendChild(el);
 }
 
@@ -2600,6 +2861,33 @@ function ageNum(p){
   if(md < 0) a--;
   return String(a);
 }
+
+/* תגית הגיל בכרטיס. ageNum מחזיר גם "בערך 71" כשידועה רק שנה,
+   ולכן המילה נשלפת החוצה — "בן 71 בערך" ולא "בן בערך 71". */
+function ageChip(p){
+  const raw = ageNum(p);
+  if(!raw) return '';
+  const m = p.gender === 'male';
+  const about = raw.indexOf('בערך ') === 0;
+  const n = about ? raw.slice(5) : raw;
+  const head = p.death ? (m ? 'נפטר בגיל ' : 'נפטרה בגיל ') : (m ? 'בן ' : 'בת ');
+  return head + n + (about ? ' בערך' : '');
+}
+
+/* הפתקים כדף מחברת אחד. שתי המילים הראשונות מודגשות כדי שהעין
+   תמצא איפה כל פתק מתחיל — שורה ריקה לבדה לא מספיקה כשהטקסט
+   יושב על אותם קווים. */
+function noteLines(n){
+  const t = String(n.text || '').trim();
+  const m = t.match(/^(\S+(?:\s+\S+)?)([\s\S]*)$/);
+  const head = m ? m[1] : t, tail = m ? m[2] : '';
+  return '<p class="nb-text"><b>' + esc(head) + '</b>' + esc(tail) + '</p>' +
+         (n.by ? '<p class="nb-by">— ' + esc(n.by) + '</p>' : '');
+}
+const notebookHTML = list =>
+  '<div class="notebook">' +
+  list.map(noteLines).join('<div class="nb-gap"></div>') +
+  '</div>';
 /* ספירת קרבות. הכל נגזר מהקישורים הקיימים — אין נתון שמור.
    האוספים ייחודיים, כי בנישואים בתוך המשפחה אותו אדם
    נגיש משני מסלולים ואסור לספור אותו פעמיים. */
@@ -2671,19 +2959,36 @@ function statsRowHTML(id){
    הוצג בחמישה מקומות כ-&#39; במקום גרש. */
 function relationText(id){
   const p = DB.people[id], m = p.gender === 'male';
-  const nameOf = x => (DB.people[x] || {}).name || '';
+  /* ממלא מקום נושא את השם 'לא ידוע' (ראו toPlaceholder), ולכן
+     בדיקת מחרוזת ריקה לבדה לא תפסה אותו: התוצאה הייתה "נשואה
+     ללא ידוע", שנקרא בעברית כ"נשואה ללא" — ההפך הגמור. כאן הוא
+     נחשב חסר שם, והניסוח יורד למצב בלבד: "נשואה". */
+  const nameOf = x => {
+    const q = DB.people[x];
+    return !q || q.placeholder ? '' : (q.name || '');
+  };
   const asKid = DB.unions.find(u => u.children.includes(id));
   const bits = [];
-  if(asKid) bits.push((m ? 'בן של ' : 'בת של ') +
-                      asKid.partners.map(nameOf).join(' ו'));
+  /* גם כאן: הורה ממלא מקום בלי שם הפיק "בן של חיים ו" */
+  if(asKid){
+    const ps = asKid.partners.map(nameOf).filter(Boolean);
+    if(ps.length) bits.push((m ? 'בן של ' : 'בת של ') + ps.join(' ו'));
+  }
   unionsOf(id).forEach(u => {
     const o = spouseIn(u, id);
     if(!o) return;
     const st = statusOf(u);
-    const word = st === 'divorced' ? (m ? 'גרוש מ' : 'גרושה מ')
-               : st === 'partners' ? (m ? 'בן זוג של ' : 'בת זוג של ')
-               : (m ? 'נשוי ל' : 'נשואה ל');
-    bits.push(word + nameOf(o));
+    const who = nameOf(o);
+    /* בן זוג ממלא מקום הוא בלי שם, ואז מילת היחס נשארת תלויה
+       באוויר — "נשואה ל" ותו לא. במקרה כזה נרשם המצב בלבד. */
+    const word = !who
+      ? (st === 'divorced' ? (m ? 'גרוש' : 'גרושה')
+       : st === 'partners' ? (m ? 'בן זוג' : 'בת זוג')
+       : (m ? 'נשוי' : 'נשואה'))
+      : (st === 'divorced' ? (m ? 'גרוש מ' : 'גרושה מ')
+       : st === 'partners' ? (m ? 'בן זוג של ' : 'בת זוג של ')
+       : (m ? 'נשוי ל' : 'נשואה ל'));
+    bits.push(word + who);
   });
   return bits.join(' · ') || 'שורש העץ';
 }
@@ -2735,45 +3040,72 @@ function openSheetForce(id, origin){
   document.querySelectorAll('.node.is-open').forEach(n => n.classList.remove('is-open'));
   document.querySelector(`.node[data-id="${id}"]`)?.classList.add('is-open');
 
-  /* v מגיע מהמסד — עובר בריחה כאן, פעם אחת, לכל השורות */
-  const row = (k,v,cls='') => v ? `<dt>${k}</dt><dd class="${cls}">${esc(v)}</dd>` : '';
   const tint = p.gender === 'male' ? 'var(--male)' : 'var(--female)';
+  /* imgTag מחזיר מחרוזת ריקה לכתובת שאינה עוברת את safeImg. התנאי
+     הוא עליו ולא על p.photo, אחרת הייתה נוצרת רצועה ריקה לגמרי. */
+  const shot = imgTag(p.photo || p.thumb, 'class="shot" alt=""');
+  const title = esc(p.name) + ' ' + esc(p.surname || '') +
+    (p.maiden && p.maiden !== p.surname
+      ? ' <span class="maiden">(' + esc(p.maiden) + ')</span>'
+      : '');
+  const topBar =
+    (sheetOrigin === 'bday'
+      ? '<button class="panel-x" id="sheetBack" title="חזרה לימי הולדת">→</button>'
+      : '<span></span>') +
+    '<button class="panel-x" id="sheetX" title="סגירה">×</button>';
+
+  /* תגית נוצרת רק כשיש מה לכתוב בה. אין מסגרות ריקות ואין
+     הזמנות למלא — הכרטיס פשוט מתקצר. */
+  const chips = [];
+  const age = ageChip(p);
+  if(age) chips.push(age);
+  if(p.city) chips.push(p.city);
+  if(p.death) chips.push((p.gender === 'male' ? 'נפטר ' : 'נפטרה ') + fmtDate(p.death));
+
+  const notes = (p.notes && p.notes.length) ? p.notes : [];
 
   sheetBody.innerHTML = `
-    <div class="sheet-top">
-      ${sheetOrigin === 'bday'
-        ? '<button class="panel-x" id="sheetBack" title="חזרה לימי הולדת">→</button>'
-        : '<span></span>'}
-      <button class="panel-x" id="sheetX" title="סגירה">×</button>
-    </div>
-    <div class="hero">
-      <div class="avatar" id="heroAvatar"
-           style="background:${tint};color:${tint}">${avatarInner(p, true)}</div>
-      <div class="hero-text">
-        <h2 id="sheetName">${esc(p.name)} ${esc(p.surname || '')}${p.maiden && p.maiden !== p.surname ? ' <span style="font-size:14px;font-weight:400;color:var(--ink-soft)">(' + esc(p.maiden) + ')</span>' : ''}</h2>
-        <div class="sub">${esc(relationText(id))}</div>
-        ${statsRowHTML(id)}
+    ${shot ? `<div class="hero-wide">
+      ${imgTag(p.photo || p.thumb, 'class="blur" alt="" aria-hidden="true"')}
+      ${shot}
+      <div class="shade"></div>
+      <div class="sheet-top over">${topBar}</div>
+      <div class="cap">
+        <h2 id="sheetName">${title}</h2>
+        <p class="sub">${esc(relationText(id))}</p>
       </div>
-    </div>
-    <dl class="facts">
-      ${row('תאריך לידה', fmtDate(p.birth))}
-      ${p.death ? `<div class="memorial" style="display:contents">${row('תאריך פטירה', fmtDate(p.death))}</div>` : ''}
-      ${row(p.death ? 'גיל בפטירה' : 'גיל', ageNum(p))}
-      ${row('עיר מגורים', p.city)}
-    </dl>
-    ${(p.phone || p.email) ? `<div class="contact-mini">
-        ${p.phone ? `<span><b>טלפון</b><i>${esc(p.phone)}</i></span>` : ''}
-        ${p.email ? `<span><b>אימייל</b><i>${esc(p.email)}</i></span>` : ''}
-      </div>` : ''}
-    ${(p.notes && p.notes.length) ? `<div class="notes-list sheet">
-        ${p.notes.map(noteCard).join('')}</div>` : ''}
+    </div>` : `<div class="sheet-top">${topBar}</div>
+    <div class="hero-min">
+      <div class="medal" id="heroAvatar" style="background:${tint};color:${tint}"
+        ><span>${p.placeholder ? '?' : esc(p.name.charAt(0))}</span></div>
+      <div class="txt">
+        <h2 id="sheetName">${title}</h2>
+        <p class="sub">${esc(relationText(id))}</p>
+      </div>
+    </div>`}
+    ${chips.length ? `<div class="chips">${
+      chips.map((c, i) => '<span' + (i === chips.length - 1 && p.death
+        ? ' id="deathChip"' : '') + '>' + esc(c) + '</span>').join('')}</div>` : ''}
     ${FLOATING.has(id) ? `<p class="note" style="border-inline-start-color:var(--clay)">
       האדם הזה אינו מחובר לעץ. במצב עריכה אפשר לשייך אותו להורים,
       או לקשר אותו כבן/בת זוג של מישהו שנמצא בעץ.</p>` : ''}
     ${p.placeholder ? `<p class="note" style="border-inline-start-color:var(--wood)">
       הרשומה הזו נוצרה אוטומטית כשאדם נמחק, כדי לשמור על הענף שמתחתיו.
       אפשר למלא בה פרטים במצב עריכה והיא תחזור להיות רשומה רגילה.</p>` : ''}
-    ${isAdmin() ? '' : `<p class="note">זו תצוגה בלבד. אפשר לשלוח בקשת עריכה או להוסיף סיפור,
+    ${statsRowHTML(id)}
+    <section class="notes-sec">
+      ${notes.length ? '<h3 class="sec-h">פתקים וסיפורים</h3>' + notebookHTML(notes) : ''}
+      <div class="nb-add">
+        <button class="btn-pill" id="addNote">הוספת פתק</button>
+        <p>זיכרון, כינוי, או משהו קטן — גם משפט אחד מספיק</p>
+      </div>
+    </section>
+    ${(p.phone || p.email) ? `<div class="contact-end">
+      <h3>פרטי תקשורת</h3>
+      ${p.phone ? `<div class="ce"><b>טלפון</b><a href="tel:${esc(encodeURIComponent(p.phone))}">${esc(p.phone)}</a></div>` : ''}
+      ${p.email ? `<div class="ce"><b>אימייל</b><a href="mailto:${esc(encodeURIComponent(p.email))}">${esc(p.email)}</a></div>` : ''}
+    </div>` : ''}
+    ${isAdmin() ? '' : `<p class="note">זו תצוגה בלבד. אפשר לשלוח בקשת עריכה או להוסיף פתק,
       והמנהל יאשר.</p>`}`;
 
   sheetBody.classList.remove('confirming');
@@ -2787,7 +3119,12 @@ function openSheetForce(id, origin){
      חייב לקרות אחרי החיווט של התצוגה הרגילה, אחרת מחווטים
      אלמנטים שכבר הוחלפו. */
   if(editMode && isAdmin()){ renderSheetEdit(id); return; }
-  document.getElementById('heroAvatar').onclick = () => openPhoto(p);
+  const heroHit = sheetBody.querySelector('.hero-wide .shot') ||
+                  document.getElementById('heroAvatar');
+  if(heroHit) heroHit.onclick = () => openPhoto(p);
+  const addN = document.getElementById('addNote');
+  if(addN) addN.onclick = () => openNoteRequest(id);
+  if(p.death) fillHebrewDeath(p);
   document.getElementById('sheetX').onclick = closeSheet;
   const stg = document.getElementById('statsTg');
   if(stg) stg.onclick = () => {
@@ -2838,6 +3175,11 @@ let toastTimer;
 function toast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
+  /* כרטיס או לוח פתוח ⇒ ההודעה עולה למעלה. למטה היא ישבה על
+     טקסט שהמשתמש קורא באותו רגע — פתק, שדה בטופס — ולמשך
+     שתי שניות וחצי הוא פשוט לא היה שם. */
+  const over = document.querySelector('#sheet.show, #panel.show');
+  t.classList.toggle('top', !!over);
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
@@ -2883,8 +3225,13 @@ function openPanel(title, html, onMount, onBack){
 /* סרגל הכלים נעלם כשחלון פתוח, כדי לא להעמיס את המסך */
 function syncChrome(){
   const bar = document.getElementById('topbar');
-  if(!bar) return;
   const busy = panel.classList.contains('show') || sheet.classList.contains('show');
+  /* הודעה שכבר מוצגת אינה יודעת שנפתח מעליה חלון. בלי השורה
+     הזאת, "נכנסת כמנהל" מהמסך הקודם נשארה למטה וישבה על השדה
+     הראשון של הטופס שנפתח אחריה. */
+  const t = document.getElementById('toast');
+  if(t && t.classList.contains('show')) t.classList.toggle('top', busy);
+  if(!bar) return;
   bar.classList.toggle('tucked', busy);
 }
 
@@ -2927,24 +3274,46 @@ const tintOf   = p => p.gender === 'male' ? 'var(--male)' : 'var(--female)';
 const personSubtitle = p => relationText(p.id);
 
 /* עיגול עם תמונה, או האות הראשונה כשאין */
-const dotHTML = (photo, letter, tint) =>
-  '<span class="dot" style="background:' + tint + ';overflow:hidden">' +
+/* השם 'gring' ולא 'ring': הכיתה ring כבר תפוסה בידי טבעת הפעולות
+   שסביב כרטיס בעץ, והיא position:absolute. העיגול ירש את זה,
+   יצא מזרימת ה-flex, וישב על השם בכל רשימה באפליקציה. */
+const dotHTML = (photo, letter, tint, ring) =>
+  '<span class="dot' + (ring ? ' gring' : '') + '" style="background:' + tint +
+    ';overflow:hidden' + (ring ? ';outline-color:' + tint : '') + '">' +
   (imgTag(photo, 'style="width:100%;height:100%;object-fit:cover"')
      || esc(letter || '?')) + '</span>';
 
-/* שורת אדם לרשימות */
-function personRow(p, right, cls){
+/* הדגשת מה שהוקלד. החלוקה נעשית על הטקסט הגולמי וכל חלק מוברח
+   בנפרד — פיצול של טקסט שכבר הוברח היה יכול לחתוך ישות HTML
+   באמצע (חיפוש "amp" בתוך &amp;) ולשבור את השורה. */
+function markHit(text, q){
+  const t = String(text == null ? '' : text), n = String(q || '').trim();
+  if(!n) return esc(t);
+  const i = t.indexOf(n);
+  if(i < 0) return esc(t);
+  return esc(t.slice(0, i)) + '<mark>' + esc(t.slice(i, i + n.length)) + '</mark>' +
+         esc(t.slice(i + n.length));
+}
+
+/* סדר אלפביתי לרשימות: שם פרטי, ובשוויון שם משפחה. סדר העץ אינו
+   אומר דבר למי שמחפש. */
+const byFirstName = (a, b) =>
+  (a.name || '').localeCompare(b.name || '', 'he') ||
+  (a.surname || '').localeCompare(b.surname || '', 'he');
+
+/* שורת אדם לרשימות. q — מה שהוקלד, להדגשה. */
+function personRow(p, right, cls, q){
   return '<button class="prow" data-id="' + p.id + '">' +
-    dotHTML(p.thumb || p.photo, p.name.charAt(0), tintOf(p)) +
-    '<span class="who"><b>' + esc(fullName(p)) + '</b><span>' + esc(right || '') + '</span></span>' +
+    dotHTML(p.thumb || p.photo, p.name.charAt(0), tintOf(p), true) +
+    '<span class="who"><b>' + markHit(fullName(p), q) + '</b><span>' +
+      markHit(right || '', q) + '</span></span>' +
     (cls ? '<span class="cnt ' + cls.c + '">' + esc(cls.t) + '</span>' : '') +
     '</button>';
 }
 
 /* ---------- בחירת אדם עם חיפוש ---------- */
 function pickPerson(onPick, onBack){
-  const list = visiblePeople()
-    .sort((a,b) => fullName(a).localeCompare(fullName(b), 'he'));
+  const list = visiblePeople().sort(byFirstName);
   openPanel('בחירת בן משפחה',
     '<div class="field"><input id="pkq" placeholder="חיפוש לפי שם" autocomplete="off"></div>' +
     '<div id="pklist"></div>',
@@ -2954,7 +3323,7 @@ function pickPerson(onPick, onBack){
         const t = (q.value || '').trim();
         const hit = t ? list.filter(p => fullName(p).includes(t)) : list;
         box.innerHTML = hit.length
-          ? hit.slice(0, 60).map(p => personRow(p, personSubtitle(p))).join('')
+          ? hit.map(p => personRow(p, personSubtitle(p), null, t)).join('')
           : '<p class="empty">לא נמצא אף אחד בשם הזה</p>';
       };
       q.addEventListener('input', draw);
@@ -3015,27 +3384,21 @@ function openForm(anchorId, kind){
   const showMaiden = draft.gender === 'female' && hint.maiden;
 
   openPanel('הוספת ' + REL[kind], `
-    <div class="form-head">
-      <b>${REL[kind]} של ${esc(fullName(a))}</b>
-      <span>בדקו שזה האדם הנכון לפני שממשיכים</span>
-    </div>
+    <button class="anchor-btn" id="fAnchor">${REL[kind]} של <b>${esc(fullName(a))}</b>
+      <span class="swap">החלפה</span></button>
+    ${personFormHTML(draft)}
     ${isAdmin() ? '' : `<div class="field">
       <label>מי ממלא את הפרטים? <span class="req">*</span></label>
       <input id="fBy" value="${esc(draft.by || '')}" placeholder="השם שלכם, או איך שתזוהו">
     </div>`}
-    <div class="field">
-      <label>הקשר למשפחה</label>
-      <button class="anchor-btn" id="fAnchor">${REL[kind]} של <b>${esc(fullName(a))}</b> — להחלפה</button>
-    </div>
-    ${personFormHTML(draft)}
     <div id="fErr"></div>
     <div class="form-actions" id="fActions">
       <button class="btn btn-primary" id="fSave">${isAdmin() ? 'הוספה לעץ' : 'שליחה לאישור'}</button>
       <button class="btn btn-ghost" id="fCancel">ביטול</button>
     </div>
-    <p class="note">${isAdmin()
-      ? 'כמנהל, ההוספה נכנסת לעץ מיד, בלי לעבור דרך רשימת הבקשות.'
-      : 'הבקשה נשמרת כממתינה עד לאישור המנהל.'}</p>`,
+    ${isAdmin()
+      ? '<p class="note">כמנהל, ההוספה נכנסת לעץ מיד, בלי לעבור דרך רשימת הבקשות.</p>'
+      : '<p class="send-note">יעבור לאישור מנהל המשפחה, ויתווסף לעץ רק אחרי שיאשר.</p>'}`,
   () => {
     const g = id => panelBody.querySelector('#' + id);
     const val = id => (g(id) && g(id).value) || '';
@@ -3054,6 +3417,11 @@ function openForm(anchorId, kind){
         if(!draft.surTouched && sr){ draft.surname = h.sur; sr.value = h.sur; }
         const w = g('pfMaidenWrap');
         if(w) w.hidden = !(draft.gender === 'female' && h.maiden);
+        /* הרשימה שמתחת ל"עוד פרטים" נגזרת מהשדה עצמו ולא מהמגדר,
+           ולכן היא לא יכולה להבטיח שדה שנשאר מוסתר. */
+        const sum = panelBody.querySelector('#pfFold .s');
+        if(sum) sum.textContent =
+          foldSummary(FIELDS.filter(f => f.group === 'extra'), !!w && !w.hidden);
       };
     });
 
@@ -3069,6 +3437,7 @@ function openForm(anchorId, kind){
       const req = {
         id: newRid(), kind: draft.kind, anchor: draft.anchor,
         by: isAdmin() ? 'המנהל' : draft.by.trim(),
+        at: new Date().toISOString(),
         data: {name:(draft.name||'').trim(), surname:(draft.surname||'').trim(), gender:draft.gender,
                maiden:(draft.maiden||'').trim(), birth:draft.birth || '', death:draft.death || '',
                city:(draft.city||'').trim(), phone:(draft.phone||'').trim(),
@@ -3140,6 +3509,21 @@ function pendingRowCount(){
   });
   return n;
 }
+/* מי שלח ומתי. למנהל שמחליט אם לאשר, "מי ביקש" הוא חצי
+   מההחלטה — והוא לא הופיע בתור כלל. */
+function agoText(iso){
+  if(!iso) return '';
+  const d = Math.floor((Date.now() - Date.parse(iso)) / 86400000);
+  if(!isFinite(d) || d < 0) return '';
+  return d === 0 ? 'היום' : d === 1 ? 'אתמול' : 'לפני ' + plural(d, 'יום אחד', 'ימים');
+}
+function reqMeta(r){
+  const w = String(r.by || '').trim();
+  const t = agoText(r.at);
+  const s = [w ? 'מאת ' + w : '', t].filter(Boolean).join(' · ');
+  return s ? '<span class="meta">' + esc(s) + '</span>' : '';
+}
+
 function refreshReqChip(){
   const c = document.getElementById('btnReq');
   const n = pendingRowCount();
@@ -3157,8 +3541,9 @@ function openRequests(){
           return '<button class="prow" data-req="' + r.id + '">' +
             dotHTML(t.thumb || t.photo, t.name.charAt(0), tintOf(t)) +
             '<span class="who"><b>' + esc(fullName(t)) + '</b>' +
-            '<span>' + esc(r.text.slice(0, 42)) + (r.text.length > 42 ? '…' : '') + '</span></span>' +
-            '<span class="cnt story">סיפור חדש</span></button>';
+            '<span>' + esc(r.text.slice(0, 42)) + (r.text.length > 42 ? '…' : '') + '</span>' +
+            reqMeta(r) + '</span>' +
+            '<span class="cnt story">פתק חדש</span></button>';
         }
         if(r.kind === 'edit'){
           const grp = editReqsFor(r.target);
@@ -3172,7 +3557,7 @@ function openRequests(){
           return '<button class="prow" data-req="' + r.id + '">' +
             dotHTML(ph, t ? t.name.charAt(0) : '?', t ? tintOf(t) : 'var(--wood-soft)') +
             '<span class="who"><b>' + esc(fullName(t)) + '</b>' +
-            '<span>' + esc(personSubtitle(t)) + '</span></span>' +
+            '<span>' + esc(personSubtitle(t)) + '</span>' + reqMeta(r) + '</span>' +
             '<span class="cnt edit">בקשת עריכה<b>' + plural(n, 'שינוי אחד', 'שינויים') +
               (grp.length > 1 ? ' · ' + plural(grp.length, 'בקשה אחת', 'בקשות') : '') + '</b></span></button>';
         }
@@ -3181,7 +3566,8 @@ function openRequests(){
           dotHTML(r.data.thumb || r.data.photo, r.data.name.charAt(0),
                   r.data.gender === 'male' ? 'var(--male)' : 'var(--female)') +
           '<span class="who"><b>' + esc(r.data.name + ' ' + r.data.surname) + '</b>' +
-          '<span>' + REL[r.kind] + ' של ' + esc(fullName(a)) + '</span></span>' +
+          '<span>' + REL[r.kind] + ' של ' + esc(fullName(a)) + '</span>' +
+          reqMeta(r) + '</span>' +
           '<span class="cnt new">בן משפחה חדש</span></button>';
       }).join('')
     : '<p class="empty">אין בקשות ממתינות</p>';
@@ -3398,6 +3784,7 @@ function applyRequest(req){
 
 /* ---------- ימי הולדת ---------- */
 let bdayMode = 'greg';
+let bdayQuery = '';
 const heCache = {};
 let heToday = null;
 
@@ -3419,46 +3806,98 @@ function daysUntil(iso){
    ביותר, הוצגו עם גיל גדול בשנה מהאמת. */
 const ageAtNextBirthday = iso =>
   nextBirthday(iso).getFullYear() - Number(String(iso).slice(0, 4));
+/* ההדגשה נשמרת לעשרה ימים ומטה, והיא ירוקה: כתום נקרא כאזהרה,
+   ויום הולדת אינו אזהרה. */
 const countLabel = n => n === 0 ? {t:'היום', c:'today'}
                      : n === 1 ? {t:'מחר', c:'soon'}
-                     : {t:'עוד ' + plural(n, 'יום אחד', 'ימים'), c: n <= 30 ? 'soon' : ''};
+                     : {t:'עוד ' + plural(n, 'יום אחד', 'ימים'), c: n <= 10 ? 'soon' : ''};
 
 /* ספירה לאחור דורשת יום וחודש, ולכן מי שרשומה לו רק שנה
    לא מופיע ברשימה. הגיל בכרטיסייה עדיין מחושב לפי השנה. */
 const livingWithBirth = () =>
   visiblePeople().filter(p => isFullDate(p.birth) && !p.death);
 
+const willBe = p => (p.gender === 'male' ? 'ימלאו לו ' : 'ימלאו לה ') +
+                    ageAtNextBirthday(p.birth);
+const lifeSpan = p => yearOfDate(p.birth) + '–' + yearOfDate(p.death);
+
+/* השורה של מי שנפטר: תאריך הלידה ותוחלת החיים, ותו לא. אין מה
+   לחגוג ואין למה לספור, ולכן גם אין תגית ואין "ימלאו לו". */
+const bdayLine = p => p.death
+  ? {sub: fmtDate(p.birth) + ' · ' + lifeSpan(p), cnt: null}
+  : isFullDate(p.birth)
+    ? {sub: fmtDate(p.birth) + ' · ' + willBe(p), cnt: countLabel(daysUntil(p.birth))}
+    : {sub: fmtDate(p.birth), cnt: null};
+
 function bdayShell(inner){
   return '<div class="seg">' +
     '<button data-m="greg" class="' + (bdayMode==='greg'?'on':'') + '">תאריך לועזי</button>' +
     '<button data-m="he" class="' + (bdayMode==='he'?'on':'') + '">תאריך עברי</button>' +
-    '</div><div id="bdayList">' + inner + '</div>';
+    '</div>' +
+    '<div class="field" style="margin-bottom:8px">' +
+      '<input id="bq" placeholder="חיפוש לפי שם" autocomplete="off" value="' +
+        esc(bdayQuery) + '">' +
+      /* שינוי ההיקף נאמר במפורש: בלי השורה הזאת פתאום מופיע מישהו
+         שנפטר, ולא ברור למה. */
+      '<p class="bday-scope" id="bScope"' + (bdayQuery ? '' : ' hidden') + '>' +
+        'מחפש בכל המשפחה, כולל מי שאינם איתנו</p>' +
+    '</div>' +
+    '<div id="bdayList">' + inner + '</div>';
 }
 
+/* מי שהחיפוש מוצא — כולל מי שנפטר, וכולל מי שידועה לו רק שנה */
+const bdaySearch = q => visiblePeople()
+  .filter(p => p.birth && (fullName(p).includes(q) || (p.maiden || '').includes(q)))
+  .sort(byFirstName);
+
 function openBirthdays(){
-  openPanel('ימי הולדת קרובים', bdayShell('<p class="empty">רגע…</p>'), () => {
+  openPanel('ימי הולדת', bdayShell('<p class="empty">רגע…</p>'), () => {
     panelBody.querySelectorAll('.seg button').forEach(b => b.onclick = () => {
       bdayMode = b.dataset.m;
       openBirthdays();
+    });
+    const bq = panelBody.querySelector('#bq');
+    bq.addEventListener('input', () => {
+      bdayQuery = bq.value || '';
+      panelBody.querySelector('#bScope').hidden = !bdayQuery.trim();
+      if(bdayMode === 'greg') drawGreg(); else drawHebrew();
     });
     if(bdayMode === 'greg') drawGreg(); else drawHebrew();
   });
 }
 
-function drawGreg(){
-  const rows = livingWithBirth()
-    .map(p => ({p, n: daysUntil(p.birth)}))
-    .sort((a,b) => a.n - b.n)
-    .map(({p,n}) => {
-      return personRow(p, fmtDate(p.birth) + ' · גיל ' + ageAtNextBirthday(p.birth),
-                       countLabel(n));
-    });
-  const box = document.getElementById('bdayList');
-  box.innerHTML = rows.length ? rows.join('') : '<p class="empty">אין תאריכי לידה רשומים</p>';
+function wireBdayList(box){
   box.onclick = e => {
     const r = e.target.closest('.prow');
     if(r){ closePanel(); revealTo(r.dataset.id); openSheet(r.dataset.id, 'bday'); }
   };
+}
+
+function drawGreg(){
+  const box = document.getElementById('bdayList');
+  const q = (bdayQuery || '').trim();
+  if(q){
+    const hit = bdaySearch(q);
+    box.innerHTML = hit.length
+      ? hit.map(p => {
+          const l = bdayLine(p);
+          return personRow(p, l.sub, l.cnt, q);
+        }).join('')
+      : '<p class="empty">לא נמצא אף אחד בשם הזה</p>';
+    return wireBdayList(box);
+  }
+  const rows = livingWithBirth()
+    .map(p => ({p, n: daysUntil(p.birth)}))
+    .sort((a,b) => a.n - b.n);
+  const sec = (title, list) => !list.length ? '' :
+    '<h3 class="bday-h">' + title + '</h3>' +
+    list.map(({p,n}) => personRow(p, fmtDate(p.birth) + ' · ' + willBe(p),
+                                  countLabel(n))).join('');
+  box.innerHTML = rows.length
+    ? sec('החודש הקרוב', rows.filter(r => r.n <= 30)) +
+      sec('המשך השנה',  rows.filter(r => r.n > 30))
+    : '<p class="empty">אין תאריכי לידה רשומים</p>';
+  wireBdayList(box);
 }
 
 /* המרה לתאריך עברי מול Hebcal. ללא מפתח, ללא הרשמה. */
@@ -3494,13 +3933,50 @@ async function hebrewBirthday(p){
   return (heCache[p.id] = {hebrew: born.hebrew, iso, n});
 }
 
+/* התאריך העברי של הפטירה, לצד הלועזי באותה תגית.
+   ההמרה היא פנייה לרשת, ולכן היא מתווספת אחרי שהכרטיס כבר מצויר:
+   אם אין רשת פשוט נשאר התאריך הלועזי, בלי הודעת שגיאה ובלי שורה
+   ריקה שמחכה למשהו שלא יגיע. */
+const heDeathCache = {};
+async function fillHebrewDeath(p){
+  if(!p.death || !isFullDate(p.death)) return;
+  const key = p.id + '|' + p.death, target = p.id;
+  try{
+    let he = heDeathCache[key];
+    if(he === undefined){
+      const [y,m,d] = p.death.split('-').map(Number);
+      const r = await heConvert('https://www.hebcal.com/converter?cfg=json&gy=' + y +
+        '&gm=' + m + '&gd=' + d + '&g2h=1');
+      he = heDeathCache[key] = r.hebrew || '';
+    }
+    if(!he) return;
+    if(openId !== target) return;          // הכרטיס התחלף בזמן הפנייה
+    const el = document.getElementById('deathChip');
+    if(!el || el.dataset.he) return;       // כבר הושלם — אחרת היה מוכפל
+    el.dataset.he = '1';
+    el.textContent = el.textContent + '  |  ' + he;
+  }catch(e){ /* אין רשת — התאריך הלועזי לבדו */ }
+}
+
 async function drawHebrew(){
   const box = document.getElementById('bdayList');
-  const people = livingWithBirth()
-    .map(p => ({p, n: daysUntil(p.birth)}))
-    .sort((a,b) => a.n - b.n)
-    .slice(0, 20)
-    .map(x => x.p);
+  const q = (bdayQuery || '').trim();
+  /* ההמרה היא פנייה לרשת לכל אדם, ולכן יש תקרה — אבל היא נאמרת
+     על המסך. שורת תוצאות שנעלמת בלי לומר דבר היא בדיוק מה שתוקן
+     במסך החיפוש. */
+  const CAP = 30;
+  const matched = q ? bdaySearch(q).filter(p => isFullDate(p.birth)) : null;
+  const people = q
+    ? matched.slice(0, CAP)
+    : livingWithBirth()
+        .map(p => ({p, n: daysUntil(p.birth)}))
+        .sort((a,b) => a.n - b.n)
+        .slice(0, 20)
+        .map(x => x.p);
+  if(q && !matched.length){
+    box.innerHTML = '<p class="empty">לא נמצא אף אחד עם תאריך לידה מלא בשם הזה</p>';
+    return wireBdayList(box);
+  }
   box.innerHTML = '<p class="empty">מתרגם תאריכים מול Hebcal…</p>';
   try{
     const t = new Date();
@@ -3508,13 +3984,17 @@ async function drawHebrew(){
       t.getFullYear() + '&gm=' + (t.getMonth()+1) + '&gd=' + t.getDate() + '&g2h=1');
     const out = [];
     for(const p of people) out.push({p, ...(await hebrewBirthday(p))});
-    out.sort((a,b) => a.n - b.n);
-    box.innerHTML = out.map(o => personRow(o.p, o.hebrew, countLabel(o.n))).join('') +
-      '<p class="empty">מוצגים 20 הקרובים ביותר</p>';
-    box.onclick = e => {
-      const r = e.target.closest('.prow');
-      if(r){ closePanel(); revealTo(r.dataset.id); openSheet(r.dataset.id, 'bday'); }
-    };
+    if(!q) out.sort((a,b) => a.n - b.n);
+    box.innerHTML = out.map(o => o.p.death
+        ? personRow(o.p, o.hebrew + ' · ' + lifeSpan(o.p), null, q)
+        : personRow(o.p, o.hebrew + ' · ' + willBe(o.p), countLabel(o.n), q)).join('') +
+      (q
+        ? (matched.length > CAP
+            ? '<p class="empty">מוצגות ' + CAP + ' תוצאות מתוך ' + matched.length +
+              ' — המשיכו להקליד כדי לצמצם</p>'
+            : '')
+        : '<p class="empty">מוצגים 20 הקרובים ביותר</p>');
+    wireBdayList(box);
   }catch(err){
     box.innerHTML = '<p class="empty">לא הצלחנו להגיע לשירות התאריך העברי של Hebcal.<br>' +
       'זה קורה כשאין חיבור לאינטרנט או בתצוגה מקדימה חסומה. באתר החי זה יעבוד.</p>';
@@ -3750,8 +4230,15 @@ document.getElementById('btnLogout').onclick = () => {
    המידות מכוונות לפי הצלע הקצרה, כי התצוגה היא עיגול
    שגוזר את הצדדים ממילא. */
 /* max = תקרת האורך של מחרוזת ה-data URL, בתווים */
-const PHOTO_FULL  = {px:800, q:0.82, max:220 * 1024};
-const PHOTO_THUMB = {px:256, q:0.78, max: 40 * 1024};
+/* היחס שנשמר. הוא נבחר כך ששלוש הצורות שהתמונה מופיעה בהן
+   חולקות גובה אחד — ולכן העיגול והכרטיס שבעץ נגזרים ממנו
+   אוטומטית ב-object-fit:cover, בלי קובץ נוסף. */
+const CROP_AR = 5 / 3;
+/* px הוא הצלע הקצרה, כלומר הגובה. 600×1000 הוא כמעט בדיוק אותו
+   מספר פיקסלים כמו הריבוע 800×800 שהיה כאן, ולכן תקרות הגודל
+   למטה נשארות תקפות. */
+const PHOTO_FULL  = {px:600, q:0.82, max:220 * 1024};
+const PHOTO_THUMB = {px:200, q:0.78, max: 40 * 1024};
 
 /* הקטנה בשלבים של חצי. קפיצה ישירה מ-4000 פיקסל ל-256 יוצרת
    שיניים ורעש; חצי בכל פעם שומרת על חדות. */
@@ -3780,16 +4267,17 @@ function scaleToCanvas(img, px){
 
 /* חותך ריבוע מתוך התמונה ומחזיר את שתי הגרסאות.
    sx,sy,side — באזור הפיקסלים של התמונה המקורית. */
-function cropToVersions(img, sx, sy, side){
+function cropToVersions(img, sx, sy, sw, sh){
   /* שלב ביניים: אם החיתוך ענק, מקטינים אותו פעם אחת לגודל סביר
      לפני ההקטנה בשלבים. קנבס של 3000×3000 תופס הרבה זיכרון בטלפון. */
-  const cap = Math.min(side, PHOTO_FULL.px * 2);
+  const cap = Math.min(sh, PHOTO_FULL.px * 2);
   const mid = document.createElement('canvas');
-  mid.width = mid.height = Math.max(1, Math.round(cap));
+  mid.height = Math.max(1, Math.round(cap));
+  mid.width  = Math.max(1, Math.round(cap * CROP_AR));
   const mx = mid.getContext('2d');
   mx.imageSmoothingEnabled = true;
   mx.imageSmoothingQuality = 'high';
-  mx.drawImage(img, sx, sy, side, side, 0, 0, mid.width, mid.height);
+  mx.drawImage(img, sx, sy, sw, sh, 0, 0, mid.width, mid.height);
   return {
     photo: encodeUnder(scaleToCanvas(mid, PHOTO_FULL.px), PHOTO_FULL),
     thumb: encodeUnder(scaleToCanvas(mid, PHOTO_THUMB.px), PHOTO_THUMB)
@@ -3841,21 +4329,37 @@ function openCropper(file){
     const ok    = document.getElementById('cropOk');
     const no    = document.getElementById('cropNo');
 
-    /* מסגרת ריבועית, לפי רוחב המסך */
-    const F = Math.round(Math.min(window.innerWidth * 0.78, 320));
-    frame.style.width = frame.style.height = F + 'px';
+    /* המסגרת היא מה שנשמר: 5:3, לפי רוחב המסך */
+    const FW = Math.round(Math.min(window.innerWidth * 0.84, 340));
+    const FH = Math.round(FW / CROP_AR);
+    frame.style.width  = FW + 'px';
+    frame.style.height = FH + 'px';
     el.src = img.src;
 
-    /* בקנה המידה הבסיסי הצלע הקצרה ממלאת בדיוק את המסגרת */
-    const base = F / Math.min(img.width, img.height);
+    /* קווי העזר: גובה אחד לשלושתם. העיגול קוטרו הגובה, הכרטיס
+       שבעץ רחב ממנו ביחס 7:6, והמסגרת כולה היא כרטיס האדם. */
+    const cardW = Math.round(FH * 7 / 6);
+    const side  = Math.max(0, Math.round((FW - cardW) / 2));
+    const gc = document.getElementById('gCircle');
+    const gk = document.getElementById('gCard');
+    gc.style.width = gc.style.height = FH + 'px';
+    gc.style.left = Math.round((FW - FH) / 2) + 'px';
+    gk.style.left = side + 'px';
+    gk.style.width = cardW + 'px';
+    /* ההצללה נמוגה פנימה ועוברת דרך קו הכרטיס, ולכן רוחבה כפול */
+    document.getElementById('gDimL').style.width =
+      document.getElementById('gDimR').style.width = (side * 2) + 'px';
+
+    /* בקנה המידה הבסיסי התמונה מכסה את המסגרת כולה */
+    const base = Math.max(FW / img.width, FH / img.height);
     let z = 1, tx = 0, ty = 0;
 
     const draw = () => {
       const s = base * z;
       const w = img.width * s, h = img.height * s;
       /* תמיד מכסים את המסגרת — אי אפשר לגרור לשוליים ריקים */
-      tx = Math.min(0, Math.max(F - w, tx));
-      ty = Math.min(0, Math.max(F - h, ty));
+      tx = Math.min(0, Math.max(FW - w, tx));
+      ty = Math.min(0, Math.max(FH - h, ty));
       el.style.width  = w + 'px';
       el.style.height = h + 'px';
       el.style.transform = 'translate(' + tx + 'px,' + ty + 'px)';
@@ -3863,8 +4367,8 @@ function openCropper(file){
     /* פתיחה ממורכזת */
     const center = () => {
       const s = base * z;
-      tx = (F - img.width * s) / 2;
-      ty = (F - img.height * s) / 2;
+      tx = (FW - img.width * s) / 2;
+      ty = (FH - img.height * s) / 2;
       draw();
     };
     zoom.value = 100;
@@ -3922,10 +4426,10 @@ function openCropper(file){
     zoom.oninput = () => {
       const nz = Math.max(1, Number(zoom.value) / 100);
       /* שומרים על מרכז המסגרת */
-      const cx = (F / 2 - tx) / (base * z), cy = (F / 2 - ty) / (base * z);
+      const cx = (FW / 2 - tx) / (base * z), cy = (FH / 2 - ty) / (base * z);
       z = nz;
-      tx = F / 2 - cx * base * z;
-      ty = F / 2 - cy * base * z;
+      tx = FW / 2 - cx * base * z;
+      ty = FH / 2 - cy * base * z;
       draw();
     };
 
@@ -3944,11 +4448,12 @@ function openCropper(file){
       ok.disabled = true;
       /* מהמסך חזרה לפיקסלים של המקור */
       const s = base * z;
-      const side = Math.min(F / s, Math.min(img.width, img.height));
-      const sx = Math.max(0, Math.min(img.width  - side, -tx / s));
-      const sy = Math.max(0, Math.min(img.height - side, -ty / s));
+      const sw = Math.min(FW / s, img.width);
+      const sh = Math.min(FH / s, img.height);
+      const sx = Math.max(0, Math.min(img.width  - sw, -tx / s));
+      const sy = Math.max(0, Math.min(img.height - sh, -ty / s));
       let out = null, err = null;
-      try { out = cropToVersions(img, sx, sy, side); }
+      try { out = cropToVersions(img, sx, sy, sw, sh); }
       catch(e){ err = e; }
       ok.disabled = false;
       close();
@@ -3968,16 +4473,32 @@ const avatarInner = (p, full) => {
 
 /* בוחר תמונה לטופס. קורא את הקובץ בדפדפן ומציג מיד.
    בגרסה המחוברת אותו קובץ יעלה ל-Supabase Storage. */
+/* מה שמוצג במסגרת כשאין עדיין תמונה. אותו טקסט בדיוק חוזר
+   ב-wirePhoto אחרי הסרה או ביטול, ולכן הוא יושב במקום אחד. */
+const PHOTO_EMPTY =
+  '<svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" ' +
+    'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>' +
+    '<circle cx="12" cy="13" r="4"/></svg><b>הוספת תמונה</b>';
+
+/* התמונה נשארת בראש הטופס, וביחס שבו היא באמת תישמר — מסגרת
+   רחבה ולא עיגול קטן. "הסרה" מופיע רק כשיש מה להסיר. */
 function photoField(current, name, onChange){
+  const has = !!imgTag(current);
   return `<div class="field">
     <label>תמונה</label>
-    <div class="photo-pick">
-      <div class="prev" id="phPrev">${imgTag(current) || esc(name.charAt(0) || '?')}</div>
+    <div class="photo-wide">
+      <button type="button" class="prev" id="phPrev"${has ? '' : ' aria-label="הוספת תמונה"'}
+        >${imgTag(current) || PHOTO_EMPTY}</button>
       <div class="acts">
-        <button type="button" id="phPick">בחירת תמונה</button>
-        <button type="button" id="phClear">הסרה</button>
+        <!-- כשאין תמונה, המסגרת עצמה כבר אומרת "הוספת תמונה" והיא
+             לחיצה. כפתור שני מתחתיה עושה בדיוק אותו דבר במילים
+             אחרות, ומכריח את העין לבחור בין שתי אפשרויות זהות. -->
+        <button type="button" id="phPick"${has ? '' : ' hidden'}>${has ? 'החלפה' : 'בחירת תמונה'}</button>
+        <button type="button" id="phClear" class="cut"${has ? '' : ' hidden'}>הסרה</button>
       </div>
     </div>
+    <p class="hint photo-hint">אפשר גם אחר כך — אבל תמונה אחת היא מה שהופך את העץ למשפחה.</p>
     <input type="file" id="phFile" accept="image/*" hidden>
   </div>`;
 }
@@ -3985,13 +4506,30 @@ function wirePhoto(get, set){
   const f = document.getElementById('phFile');
   const prev = document.getElementById('phPrev');
   if(!f) return;
-  document.getElementById('phPick').onclick = () => {
+  const pick = document.getElementById('phPick');
+  const clear = document.getElementById('phClear');
+  /* כפתור "הסרה" שמוצג כשאין תמונה הוא כפתור מת. הוא מופיע רק
+     כשיש מה להסיר, והכפתור השני מחליף מילה בהתאם. */
+  const sync = has => {
+    if(clear) clear.hidden = !has;
+    if(pick){
+      pick.hidden = !has;              // בלי תמונה המסגרת היא הכפתור היחיד
+      pick.textContent = has ? 'החלפה' : 'בחירת תמונה';
+    }
+    if(prev){
+      if(has) prev.removeAttribute('aria-label');
+      else prev.setAttribute('aria-label', 'הוספת תמונה');
+    }
+  };
+  const open = () => {
     /* איפוס הערך, אחרת בחירה חוזרת באותו קובץ אינה מפעילה onchange
        והכפתור נראה מת — במיוחד אחרי ביטול של החיתוך. */
     f.value = '';
     f.click();
   };
-  document.getElementById('phClear').onclick = () => { set('', ''); prev.innerHTML = '?'; };
+  pick.onclick = open;
+  prev.onclick = open;                 // המסגרת כולה היא כפתור
+  clear.onclick = () => { set('', ''); prev.innerHTML = PHOTO_EMPTY; sync(false); };
   f.onchange = () => {
     const file = f.files && f.files[0];
     if(!file) return;
@@ -4000,12 +4538,14 @@ function wirePhoto(get, set){
     if(!/^image\//.test(file.type || '')){ toast('צריך לבחור קובץ תמונה'); return; }
     const back = () => {
       const cur = get();
-      prev.innerHTML = imgTag(cur) || '?';
+      prev.innerHTML = imgTag(cur) || PHOTO_EMPTY;
+      sync(!!imgTag(cur));
     };
     openCropper(file).then(r => {
       if(!r) return back();            // המשתמש ביטל
       set(r.photo, r.thumb);
-      prev.innerHTML = imgTag(r.thumb) || '?';
+      prev.innerHTML = imgTag(r.thumb) || PHOTO_EMPTY;
+      sync(!!imgTag(r.thumb));
     }).catch(e => {
       toast(e.message || 'לא הצלחתי לעבד את התמונה');
       back();
@@ -4536,13 +5076,16 @@ applyRole();
 /* ============================================================
    מודול 10 — טופס אדם משותף, מצב עריכה, ובקשות עריכה
    ============================================================ */
+/* רק שלושת הראשונים גלויים כברירת מחדל. השאר מקופל — לא כדי
+   להסתיר, אלא כדי שמי שיודע מעט לא יראה טופס שנראה כאילו אינו
+   מסוגל למלא אותו. */
 const FIELDS = [
-  {k:'name',    label:'שם פרטי',      req:true},
-  {k:'surname', label:'שם משפחה',     req:true},
-  {k:'maiden',  label:'שם נעורים'},
+  {k:'name',    label:'שם פרטי',      req:true, col:true},
+  {k:'surname', label:'שם משפחה',     req:true, col:true},
   {k:'birth',   label:'תאריך לידה',   type:'date'},
-  {k:'death',   label:'תאריך פטירה',  type:'date'},
-  {k:'city',    label:'עיר מגורים'},
+  {k:'maiden',  label:'שם נעורים',    group:'extra'},
+  {k:'death',   label:'תאריך פטירה',  type:'date', group:'extra'},
+  {k:'city',    label:'עיר מגורים',   group:'extra'},
   {k:'phone',   label:'טלפון',  group:'extra', half:true},
   {k:'email',   label:'אימייל', group:'extra', half:true},
 ];
@@ -4597,24 +5140,20 @@ const snapshot = p => ({
   phone:p.phone||'', email:p.email||''
 });
 
+/* רשימת מה שבתוך "עוד פרטים". withMaiden הוא בוליאני ולא מגדר,
+   כי "שם נעורים" תלוי גם בקשר המשפחתי ולא רק במגדר — וגזירה
+   חוזרת מהמגדר בלבד הבטיחה שדה שנשאר מוסתר. */
+function foldSummary(extra, withMaiden){
+  return extra.filter(f => f.k !== 'maiden' || withMaiden)
+              .map(f => f.label).join(' · ');
+}
+
 /* טופס אדם מלא. כל השדות מוצגים, גם הריקים. */
 function personFormHTML(d){
   const today = new Date().toISOString().slice(0,10);
-  let openedContact = false;
-  return '<div class="form-fields">' + photoField(d.photo || '', d.name || '') +
-    '<div class="field"><label>מגדר</label><div class="pick">' +
-      '<button data-g="male" class="'   + (d.gender==='male'?'on':'')   + '">זכר</button>' +
-      '<button data-g="female" class="' + (d.gender==='female'?'on':'') + '">נקבה</button>' +
-    '</div></div>' +
-    FIELDS.map(f => {
-      let pre = '';
-      if(f.group === 'extra' && !openedContact){
-        openedContact = true;
-        pre = '<div class="extra-gap"></div>';
-      }
+  const fld = f => {
       const isDate = f.type === 'date';
-      return pre +
-        '<div class="field' + (f.half ? ' half' : '') + '"' +
+      return '<div class="field' + (f.half ? ' half' : '') + (f.col ? ' col' : '') + '"' +
           (f.k==='maiden' ? ' id="pfMaidenWrap"' + (d.gender==='female'?'':' hidden') : '') +
           (f.group === 'extra' ? ' data-opt="1"' : '') + '>' +
           '<label>' + f.label + (f.req ? ' <span class="req">*</span>' : '') + '</label>' +
@@ -4634,7 +5173,28 @@ function personFormHTML(d){
               '</div><span class="hint">אפשר לרשום רק שנה, למשל 1948</span>'
             : '<input id="pf_' + f.k + '" value="' + esc(d[f.k] || '') + '">') +
         '</div>';
-    }).join('') + '</div>';
+  };
+  const base  = FIELDS.filter(f => f.group !== 'extra');
+  const extra = FIELDS.filter(f => f.group === 'extra');
+  /* כתוב מתחת לקיפול מה יש בפנים. קיפול בלי רשימה נראה כאילו
+     הוסתר משהו, ואז אנשים פותחים אותו בכל פעם סתם.
+     "שם נעורים" מופיע רק לאישה, ולכן גם ברשימה הוא מותנה —
+     אחרת הרשימה מבטיחה שדה שלא יימצא בפנים. */
+  const inside = foldSummary(extra, d.gender === 'female');
+  return '<div class="form-fields">' + photoField(d.photo || '', d.name || '') +
+    '<div class="field"><label>מגדר</label><div class="pick two">' +
+      '<button data-g="male" class="'   + (d.gender==='male'?'on':'')   + '">זכר</button>' +
+      '<button data-g="female" class="' + (d.gender==='female'?'on':'') + '">נקבה</button>' +
+    '</div></div>' +
+    base.map(fld).join('') +
+    '<button type="button" class="fold" id="pfFold" aria-expanded="false">' +
+      '<span><span class="t">עוד פרטים</span><span class="s">' + esc(inside) + '</span></span>' +
+      '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" ' +
+        'stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">' +
+        '<polyline points="6 9 12 15 18 9"/></svg>' +
+    '</button>' +
+    '<div class="fold-body" id="pfExtra" hidden>' + extra.map(fld).join('') + '</div>' +
+    '</div>';
 }
 
 /* פתק בודד בסגנון דף שורות */
@@ -4642,6 +5202,7 @@ function noteCard(n){
   return '<div class="note-card"><div class="note-body">' + esc(n.text) + '</div>' +
     '<div class="note-by">' + esc(n.by || 'לא ידוע') + '</div></div>';
 }
+let extraOpen = false;      // נשמר בין טפסים באותה הפעלה
 function readPersonForm(root, d){
   FIELDS.forEach(f => {
     const el = root.querySelector('#pf_' + f.k);
@@ -4655,6 +5216,17 @@ function wirePersonForm(root, d){
     const pick = root.querySelector('#pick_' + f.k), txt = root.querySelector('#pf_' + f.k);
     if(pick && txt) pick.onchange = () => { if(pick.value){ txt.value = pick.value; d[f.k] = pick.value; } };
   });
+  /* הקיפול. כשהמנהל פותח אותו פעם אחת הוא נשאר פתוח לכל הטפסים
+     בהמשך הפעלה — מי שממלא הרבה לא צריך לפתוח בכל פעם מחדש. */
+  const fold = root.querySelector('#pfFold'), body = root.querySelector('#pfExtra');
+  if(fold && body){
+    const set = open => {
+      body.hidden = !open;
+      fold.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    set(extraOpen);
+    fold.onclick = () => { extraOpen = body.hidden; set(extraOpen); };
+  }
   root.querySelectorAll('.pick button').forEach(b => b.onclick = () => {
     readPersonForm(root, d);
     d.gender = b.dataset.g;
@@ -5031,12 +5603,12 @@ function pickCouple(personId, onPick, onBack){
         const t = (q.value || '').trim();
         const hit = t ? list.filter(u => coupleLabel(u).includes(t)) : list;
         box.innerHTML = hit.length
-          ? hit.slice(0, 60).map(u => {
+          ? hit.map(u => {
               const a = DB.people[u.partners[0]];
               return '<button class="prow" data-u="' + u.id + '">' +
                 dotHTML(a && (a.thumb || a.photo), a ? a.name.charAt(0) : '?',
-                        a ? tintOf(a) : 'var(--wood-soft)') +
-                '<span class="who"><b>' + esc(coupleLabel(u)) + '</b>' +
+                        a ? tintOf(a) : 'var(--wood-soft)', !!a) +
+                '<span class="who"><b>' + markHit(coupleLabel(u), t) + '</b>' +
                 '<span>' + (u.children.length
                     ? plural(u.children.length, 'ילד אחד רשום', 'ילדים רשומים')
                     : 'בלי ילדים') + ' · ' +
@@ -5092,9 +5664,9 @@ function pickSpouse(id, onPick, onBack){
       const q = panelBody.querySelector('#psq'), box = panelBody.querySelector('#pslist');
       const draw = () => {
         const t = (q.value || '').trim();
-        const hit = t ? all.filter(p => fullName(p).includes(t)) : all;
+        const hit = (t ? all.filter(p => fullName(p).includes(t)) : all).sort(byFirstName);
         box.innerHTML = hit.length
-          ? hit.slice(0, 60).map(p => personRow(p, personSubtitle(p))).join('')
+          ? hit.map(p => personRow(p, personSubtitle(p), null, t)).join('')
           : '<p class="empty">לא נמצא מי שאפשר לקשר אליו</p>';
       };
       q.addEventListener('input', draw);
@@ -5225,9 +5797,9 @@ function openEditRequest(){
         chosen = null;
         fm.innerHTML = '';
         if(!t){ sg.innerHTML = ''; return; }
-        const hit = all.filter(p => fullName(p).includes(t)).slice(0, 8);
+        const hit = all.filter(p => fullName(p).includes(t)).sort(byFirstName).slice(0, 8);
         sg.innerHTML = hit.length
-          ? '<div class="sugg">' + hit.map(p => personRow(p, personSubtitle(p))).join('') + '</div>'
+          ? '<div class="sugg">' + hit.map(p => personRow(p, personSubtitle(p), null, t)).join('') + '</div>'
           : '<p class="empty">לא נמצא</p>';
       });
 
@@ -5244,14 +5816,14 @@ function openEditRequest(){
         fm.innerHTML =
           '<div class="form-head"><b>עריכת ' + esc(fullName(p)) + '</b>' +
             '<span>' + esc(personSubtitle(p)) + '</span></div>' +
+          personFormHTML(d) +
           '<div class="field"><label>מי ממלא את הפרטים? <span class="req">*</span></label>' +
             '<input id="erBy" placeholder="השם שלכם, או איך שתזוהו"></div>' +
-          personFormHTML(d) + '<div id="erErr"></div>' +
+          '<div id="erErr"></div>' +
           '<div class="form-actions" id="erActions">' +
             '<button class="btn btn-primary" id="erSend">שליחה לאישור</button>' +
             '<button class="btn btn-ghost" id="erCancel">ביטול</button></div>' +
-          '<p class="note">מלאו או תקנו כל שדה. שדות ריקים אפשר להשלים. ' +
-            'השינויים יגיעו למנהל לאישור, אחד אחד.</p>';
+          '<p class="send-note">יעבור לאישור מנהל המשפחה. כל שינוי מאושר בנפרד.</p>';
         wirePersonForm(fm, d);
         fm.querySelector('#erCancel').onclick = closePanel;
         const wireSend = () => {
@@ -5287,7 +5859,8 @@ function openEditRequest(){
               '<button class="btn btn-ghost" id="erNope">לא</button></div></div>';
           fm.querySelector('#erYes').onclick = () => {
             panelBody.classList.remove('confirming');
-            pending.push({id:newRid(), kind:'edit', target:chosen, by, data:d});
+            pending.push({id:newRid(), kind:'edit', target:chosen, by, data:d,
+                          at:new Date().toISOString()});
             refreshReqChip();
             closePanel();
             toast('בקשת העריכה נשלחה לאישור');
@@ -5462,11 +6035,15 @@ document.getElementById('btnEditReq').onclick = openEditRequest;   // סוגר �
 /* ============================================================
    מודול 11 — הוספת סיפור או הערה על בן משפחה
    ============================================================ */
-function openNoteRequest(){
+/* הטופס מקבל אדם מראש כשנפתח מתוך הכרטיס, ומתחיל בחיפוש כשנפתח
+   מהסרגל. המבנה זהה בשני המקרים — רק שורת החיפוש כבר מלאה. */
+function openNoteRequest(preId){
   closeMore();
-  openPanel('הוספת סיפור',
-    '<div class="field"><label>על מי הסיפור?</label>' +
-      '<input id="nrq" placeholder="הקלידו שם" autocomplete="off"></div>' +
+  const pre = preId && DB.people[preId] ? DB.people[preId] : null;
+  openPanel('הוספת פתק',
+    '<div class="field"><label>על מי הפתק?</label>' +
+      '<input id="nrq" placeholder="הקלידו שם" autocomplete="off"' +
+      (pre ? ' value="' + esc(fullName(pre)) + '"' : '') + '></div>' +
       '<div id="nrSugg"></div><div id="nrForm"></div>',
     () => {
       const q = panelBody.querySelector('#nrq');
@@ -5479,67 +6056,87 @@ function openNoteRequest(){
         const t = (q.value || '').trim();
         chosen = null; fm.innerHTML = '';
         if(!t){ sg.innerHTML = ''; return; }
-        const hit = all.filter(p => fullName(p).includes(t)).slice(0, 8);
+        const hit = all.filter(p => fullName(p).includes(t)).sort(byFirstName).slice(0, 8);
         sg.innerHTML = hit.length
-          ? '<div class="sugg">' + hit.map(p => personRow(p, personSubtitle(p))).join('') + '</div>'
+          ? '<div class="sugg">' + hit.map(p => personRow(p, personSubtitle(p), null, t)).join('') + '</div>'
           : '<p class="empty">לא נמצא</p>';
       });
+
+      /* הכותרת היא התמונה לרוחב, כמו בכרטיס — כדי שלא יהיה ספק
+         על מי כותבים. בלי תמונה: מדליון האות, באותה שורה. */
+      const pick = p => {
+        chosen = p.id;
+        q.value = fullName(p);
+        sg.innerHTML = '';
+        resetScroll(panelBody);
+        const shot = imgTag(p.photo || p.thumb, 'class="shot" alt=""');
+        const tint = tintOf(p);
+        fm.innerHTML =
+          (shot
+            ? '<div class="hero-wide inform">' +
+                imgTag(p.photo || p.thumb, 'class="blur" alt="" aria-hidden="true"') + shot +
+                '<div class="shade"></div><div class="cap">' +
+                  '<h2>' + esc(fullName(p)) + '</h2>' +
+                  '<p class="sub">' + esc(personSubtitle(p)) + '</p>' +
+                '</div></div>'
+            : '<div class="hero-min"><div class="medal" style="background:' + tint +
+                ';color:' + tint + '"><span>' +
+                (p.placeholder ? '?' : esc(p.name.charAt(0))) + '</span></div>' +
+              '<div class="txt"><h2>' + esc(fullName(p)) + '</h2>' +
+                '<p class="sub">' + esc(personSubtitle(p)) + '</p></div></div>') +
+          '<p class="hint" style="margin:18px 0 0">זיכרון, כינוי, או משהו קטן — ' +
+            'גם משפט אחד מספיק.</p>' +
+          '<div class="nb-form">' +
+            '<textarea id="nrText" rows="4" placeholder="הקישו כאן וכתבו…&#10;' +
+              'מה הוא היה אומר, איך קראו לו, מה תמיד עשה"></textarea>' +
+            '<div class="nb-sign" id="nrSign"><span>נכתב על ידי</span>' +
+              '<input id="nrBy" placeholder="השם שלכם"></div>' +
+          '</div>' +
+          '<div id="nrErr"></div>' +
+          '<div class="form-actions" id="nrActions">' +
+            '<button class="btn btn-primary" id="nrSend">שליחה לאישור</button>' +
+            '<button class="btn btn-ghost" id="nrCancel">ביטול</button></div>' +
+          '<p class="send-note">יעבור לאישור מנהל המשפחה, ויופיע בכרטיס רק אחרי שיאשר.</p>';
+
+        /* המחברת מתארכת לפי הכתיבה, והחתימה יורדת איתה */
+        const ta = fm.querySelector('#nrText');
+        const grow = () => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
+        ta.addEventListener('input', grow);
+        grow();
+
+        fm.querySelector('#nrCancel').onclick = closePanel;
+        fm.querySelector('#nrSend').onclick = () => {
+          const byEl = fm.querySelector('#nrBy'), sign = fm.querySelector('#nrSign');
+          const by = (byEl.value || '').trim();
+          const text = (ta.value || '').trim();
+          const err = fm.querySelector('#nrErr');
+          sign.classList.remove('bad');
+          /* בלי קו תחתון קל לפספס את שורת החתימה, ולכן ההודעה
+             לבדה לא מספיקה — גם החתימה עצמה נצבעת. */
+          if(!by){
+            err.innerHTML = '<p class="err">צריך לרשום מי כתב את הפתק</p>';
+            sign.classList.add('bad'); byEl.focus(); return;
+          }
+          if(!text){ err.innerHTML = '<p class="err">הפתק ריק</p>'; ta.focus(); return; }
+          if(chosen !== p.id || !DB.people[chosen]){
+            err.innerHTML = '<p class="err">משהו השתבש בבחירת האדם. פתחו את הטופס מחדש</p>';
+            return;
+          }
+          pending.push({id:newRid(), kind:'note', target:chosen, by, text,
+                        at:new Date().toISOString()});
+          refreshReqChip(); closePanel();
+          toast('הפתק נשלח לאישור');
+        };
+      };
 
       sg.addEventListener('click', e => {
         const row = e.target.closest('.prow');
         if(!row) return;
         const p = DB.people[row.dataset.id];
-        if(!p) return;
-        chosen = p.id;
-        q.value = fullName(p);
-        sg.innerHTML = '';
-        resetScroll(panelBody);
-        fm.innerHTML =
-          '<div class="form-head"><b>סיפור על ' + esc(fullName(p)) + '</b>' +
-            '<span>' + esc(personSubtitle(p)) + '</span></div>' +
-          '<div class="field"><label>מי הרושם? <span class="req">*</span></label>' +
-            '<input id="nrBy" placeholder="השם שלכם"></div>' +
-          '<div class="field"><label>הסיפור <span class="req">*</span></label>' +
-            '<textarea id="nrText" rows="6" placeholder="זיכרון, סיפור, כינוי, ' +
-              'או כל פרט משפחתי אחר שכדאי לשמור"></textarea></div>' +
-          '<div id="nrErr"></div>' +
-          '<div class="form-actions" id="nrActions">' +
-            '<button class="btn btn-primary" id="nrSend">שליחה לאישור</button>' +
-            '<button class="btn btn-ghost" id="nrCancel">ביטול</button></div>';
-
-        const wire = () => {
-          fm.querySelector('#nrCancel').onclick = closePanel;
-          fm.querySelector('#nrSend').onclick = () => {
-            const by = ((fm.querySelector('#nrBy') || {}).value || '').trim();
-            const text = ((fm.querySelector('#nrText') || {}).value || '').trim();
-            const err = fm.querySelector('#nrErr');
-            if(!by)   { err.innerHTML = '<p class="err">צריך לרשום מי הרושם</p>'; return; }
-            if(!text) { err.innerHTML = '<p class="err">הסיפור ריק</p>'; return; }
-            if(chosen !== p.id || !DB.people[chosen]){
-              err.innerHTML = '<p class="err">משהו השתבש בבחירת האדם. פתחו את הטופס מחדש</p>'; return;
-            }
-            const acts = fm.querySelector('#nrActions');
-            const html = acts.innerHTML;
-            panelBody.classList.add('confirming');
-            acts.innerHTML =
-              '<div style="width:100%"><p class="err" style="color:var(--ink)">' +
-                'לשלוח את הסיפור על ' + esc(fullName(p)) + ' לאישור?</p>' +
-              '<div class="form-actions"><button class="btn btn-primary" id="nrYes">כן</button>' +
-              '<button class="btn btn-ghost" id="nrNope">לא</button></div></div>';
-            fm.querySelector('#nrYes').onclick = () => {
-              panelBody.classList.remove('confirming');
-              pending.push({id:newRid(), kind:'note', target:chosen, by, text});
-              refreshReqChip(); closePanel();
-              toast('הסיפור נשלח לאישור');
-            };
-            fm.querySelector('#nrNope').onclick = () => {
-              panelBody.classList.remove('confirming');
-              acts.innerHTML = html; wire();
-            };
-          };
-        };
-        wire();
+        if(p) pick(p);
       });
+
+      if(pre) pick(pre);
     });
 }
 
@@ -5590,7 +6187,7 @@ function openNoteReview(rid){
   openRequests);
 }
 
-document.getElementById('btnNoteReq').onclick = openNoteRequest;
+document.getElementById('btnNoteReq').onclick = () => openNoteRequest();
 
 /* ---------- חיפוש מהתפריט: מוצא אדם ומביא אליו בעץ ---------- */
 function openSearch(){
@@ -5603,11 +6200,33 @@ function openSearch(){
       const draw = () => {
         const t = (q.value || '').trim();
         if(!t){ box.innerHTML = '<p class="empty">הקלידו שם פרטי או שם משפחה</p>'; return; }
-        const hit = visiblePeople().filter(p =>
-          fullName(p).includes(t) || (p.maiden || '').includes(t));
+        /* בלי תקרה. היה כאן slice(0,40) ששתק: במשפחה גדולה, מי
+           שחיפש שם משפחה קיבל 40 ולא ידע שיש עוד — והסיק שהאדם
+           אינו בעץ. */
+        const hit = visiblePeople()
+          .filter(p => fullName(p).includes(t) || (p.maiden || '').includes(t))
+          .sort(byFirstName);
         box.innerHTML = hit.length
-          ? hit.slice(0, 40).map(p => personRow(p, personSubtitle(p))).join('')
-          : '<p class="empty">לא נמצא אף אחד בשם הזה</p>';
+          ? hit.map(p => {
+              /* כשההתאמה היא בשם נעורים בלבד, בלי ציון השורה
+                 נראית כמו טעות — האדם ברשימה והשם שלו לא מכיל
+                 את מה שהוקלד. */
+              const sub = personSubtitle(p) +
+                (!fullName(p).includes(t) && (p.maiden || '').includes(t)
+                  ? ' · לבית ' + p.maiden : '');
+              return personRow(p, sub, null, t);
+            }).join('')
+          : '<p class="empty">לא נמצא אף אחד בשם "' + esc(t) + '".<br>' +
+            '<span style="font-size:13.5px">אפשר לנסות חלק מהשם בלבד, או שם נעורים.</span></p>' +
+            '<div class="search-add"><p>חסר מישהו?</p>' +
+              '<button class="btn btn-ghost" id="sAdd">הוספת בן משפחה</button></div>';
+        const add = box.querySelector('#sAdd');
+        /* אין "הוספה" בלי נקודת חיבור: כל אדם נתלה במישהו שכבר
+           בעץ. הכפתור סוגר את הדרך הסתומה ואומר מה הצעד הבא. */
+        if(add) add.onclick = () => {
+          closePanel();
+          toast('פתחו בעץ את מי שהאדם החדש מתחבר אליו, ובחרו הוספה');
+        };
       };
       q.addEventListener('input', draw);
       box.addEventListener('click', e => {
