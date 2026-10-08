@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-e5miI85GlWT51O07NeWuquy6v3fTqW2dvaBBJX52ngo=';
+  script-src 'sha256-9fxPEXhQnwzh+CA0WEuVVz8YjGHcgL0yEbMU/hgMQUw=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1171,7 +1171,9 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 07:46</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:13</p>
+    <!-- זמני, לאבחון רצועת התמונה. להסיר אחרי שנדע. -->
+    <p class="build" id="heroDiag"></p>
   </div>
 </header>
 
@@ -3046,6 +3048,7 @@ let sheetOrigin = null;   // מאיפה נפתחה הכרטיסייה, לצור�
    בתוך רצועה רחבה חותך 40% מהגובה — חצי מלמעלה, כלומר את הראש.
    תמונה צרה מהרצועה מוצגת לכן בגובה מלא וממורכזת, והשוליים
    מתמלאים בעותק המטושטש שכבר נמצא מאחוריה. */
+let HERO_DIAG = 'עוד לא נפתח כרטיס עם תמונה';   // זמני, לאבחון
 function fitHero(root){
   const el = (root || document).querySelector('.hero-wide .shot');
   if(!el) return;
@@ -3055,7 +3058,11 @@ function fitHero(root){
     const w = el.naturalWidth, h = el.naturalHeight;
     if(!w || !h) return;              // עוד לא נטענה, או שבורה
     /* סף קטן, כדי שתמונה שהיא כבר 5:3 לא תיפול לכאן בגלל עיגול */
-    box.classList.toggle('fit', (w / h) < CROP_AR - 0.03);
+    const narrow = (w / h) < CROP_AR - 0.03;
+    box.classList.toggle('fit', narrow);
+    /* זמני, לאבחון. להסיר אחרי שנדע מה באמת קורה בטלפון. */
+    HERO_DIAG = w + '×' + h + ' · ' + (w / h).toFixed(2) +
+                ' · ' + (narrow ? 'מוכל' : 'ממלא');
   };
   if(el.complete) check();
   el.addEventListener('load', check);
@@ -4053,6 +4060,9 @@ const btnMore = document.getElementById('btnMore');
 btnMore.onclick = () => {
   moreMenu.hidden = !moreMenu.hidden;
   btnMore.classList.toggle('open', !moreMenu.hidden);
+  /* זמני, לאבחון רצועת התמונה */
+  const d = document.getElementById('heroDiag');
+  if(d) d.textContent = 'תמונה: ' + HERO_DIAG;
 };
 const closeMore = () => { moreMenu.hidden = true; btnMore.classList.remove('open'); };
 
