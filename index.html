@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-9fxPEXhQnwzh+CA0WEuVVz8YjGHcgL0yEbMU/hgMQUw=';
+  script-src 'sha256-snTFC/1Y9hnd2wSx47NO+YQ/Tf3TBxpHvFtzHDa8eNY=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -289,7 +289,12 @@ body{
   background:linear-gradient(to left, rgba(20,15,11,.42), rgba(20,15,11,.12) 50%, rgba(20,15,11,0));}
 .crop-guide .g-card{top:0; bottom:0;
   border-left:1.5px dashed rgba(255,252,246,.8); border-right:1.5px dashed rgba(255,252,246,.8);}
-.crop-guide .g-circle{top:0; border-radius:50%; border:2px solid rgba(255,252,246,.95);
+/* סימון הראש. קודם היה כאן עיגול בגובה המסגרת כולה, עם ההנחיה
+   "שהפנים יהיו בתוך העיגול" — ומי שציית הגדיל את הפנים עד שמילאו
+   את כל הגובה, כלומר שמר תמונה שהראש נוגע בקצה שלה. הסימון הוא
+   עכשיו בגודל ראש ממש, ויושב מעט מעל המרכז, כך שציות להנחיה
+   נותן פורטרט עם מרווח מעל הראש. */
+.crop-guide .g-circle{border-radius:50%; border:2px solid rgba(255,252,246,.95);
   box-sizing:border-box;}
 .crop-legend{
   display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
@@ -1171,9 +1176,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:13</p>
-    <!-- זמני, לאבחון רצועת התמונה. להסיר אחרי שנדע. -->
-    <p class="build" id="heroDiag"></p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:34</p>
   </div>
 </header>
 
@@ -1207,7 +1210,7 @@ mark{
 <div id="lightbox"><div class="big-avatar" id="bigAvatar"></div></div>
 
 <div id="cropper">
-  <h3>חיתוך התמונה<span>גררו והתקרבו כך שהפנים יהיו בתוך העיגול. כל השאר ייחתך לפי המקום.</span></h3>
+  <h3>חיתוך התמונה<span>גררו והתקרבו כך שהראש יתיישב בתוך הסימון. הוא קטן בכוונה — תמונה טובה צריכה אוויר מעל הראש.</span></h3>
   <div class="crop-frame" id="cropFrame"><img id="cropImg" alt="">
     <div class="crop-guide" aria-hidden="true">
       <span class="g-dim l" id="gDimL"></span><span class="g-dim r" id="gDimR"></span>
@@ -1216,7 +1219,7 @@ mark{
     </div>
   </div>
   <p class="crop-legend">
-    <span><i style="border-top:2px solid #F3EADA"></i>העיגול — ברשימות</span>
+    <span><i style="border-top:2px solid #F3EADA"></i>הראש כאן</span>
     <span><i style="border-top:1.5px dashed #B9AC98"></i>הכרטיס שבעץ</span>
     <span>המסגרת כולה — כרטיס האדם</span>
   </p>
@@ -3048,7 +3051,6 @@ let sheetOrigin = null;   // מאיפה נפתחה הכרטיסייה, לצור�
    בתוך רצועה רחבה חותך 40% מהגובה — חצי מלמעלה, כלומר את הראש.
    תמונה צרה מהרצועה מוצגת לכן בגובה מלא וממורכזת, והשוליים
    מתמלאים בעותק המטושטש שכבר נמצא מאחוריה. */
-let HERO_DIAG = 'עוד לא נפתח כרטיס עם תמונה';   // זמני, לאבחון
 function fitHero(root){
   const el = (root || document).querySelector('.hero-wide .shot');
   if(!el) return;
@@ -3058,11 +3060,7 @@ function fitHero(root){
     const w = el.naturalWidth, h = el.naturalHeight;
     if(!w || !h) return;              // עוד לא נטענה, או שבורה
     /* סף קטן, כדי שתמונה שהיא כבר 5:3 לא תיפול לכאן בגלל עיגול */
-    const narrow = (w / h) < CROP_AR - 0.03;
-    box.classList.toggle('fit', narrow);
-    /* זמני, לאבחון. להסיר אחרי שנדע מה באמת קורה בטלפון. */
-    HERO_DIAG = w + '×' + h + ' · ' + (w / h).toFixed(2) +
-                ' · ' + (narrow ? 'מוכל' : 'ממלא');
+    box.classList.toggle('fit', (w / h) < CROP_AR - 0.03);
   };
   if(el.complete) check();
   el.addEventListener('load', check);
@@ -4060,9 +4058,6 @@ const btnMore = document.getElementById('btnMore');
 btnMore.onclick = () => {
   moreMenu.hidden = !moreMenu.hidden;
   btnMore.classList.toggle('open', !moreMenu.hidden);
-  /* זמני, לאבחון רצועת התמונה */
-  const d = document.getElementById('heroDiag');
-  if(d) d.textContent = 'תמונה: ' + HERO_DIAG;
 };
 const closeMore = () => { moreMenu.hidden = true; btnMore.classList.remove('open'); };
 
@@ -4392,16 +4387,28 @@ function openCropper(file){
     frame.style.height = FH + 'px';
     el.src = img.src;
 
-    /* קווי העזר: גובה אחד לשלושתם. העיגול קוטרו הגובה, הכרטיס
-       שבעץ רחב ממנו ביחס 7:6, והמסגרת כולה היא כרטיס האדם. */
+    /* המסגרת כולה היא כרטיס האדם, והמלבן המקווקו שבתוכה הוא
+       הכרטיס שבעץ — הצדדים שמחוצה לו ייחתכו שם. */
     const cardW = Math.round(FH * 7 / 6);
     const side  = Math.max(0, Math.round((FW - cardW) / 2));
     const gc = document.getElementById('gCircle');
     const gk = document.getElementById('gCard');
-    gc.style.width = gc.style.height = FH + 'px';
-    gc.style.left = Math.round((FW - FH) / 2) + 'px';
     gk.style.left = side + 'px';
     gk.style.width = cardW + 'px';
+
+    /* סימון הראש. קודם זה היה עיגול בגובה המסגרת כולה, וההנחיה
+       "שהפנים יהיו בתוך העיגול" הורתה בפועל למלא את כל הגובה
+       בפנים — ואז הראש נגע בקצה התמונה השמורה. כאן הסימון הוא
+       בגודל ראש (0.56 מהגובה), ברוחב 3:4 כמו ראש, ומרכזו מעט מעל
+       אמצע המסגרת — כך שמי שמתאים אליו מקבל מרווח מעל הראש.
+       הסימון נכנס בשלמותו גם בריבוע שבמרכז, שהוא מה שמוצג
+       בעיגולים הקטנים שברשימות. */
+    const headH = Math.round(FH * 0.56);
+    const headW = Math.round(headH * 0.75);
+    gc.style.height = headH + 'px';
+    gc.style.width  = headW + 'px';
+    gc.style.top    = Math.round(FH * 0.42 - headH / 2) + 'px';
+    gc.style.left   = Math.round((FW - headW) / 2) + 'px';
     /* ההצללה נמוגה פנימה ועוברת דרך קו הכרטיס, ולכן רוחבה כפול */
     document.getElementById('gDimL').style.width =
       document.getElementById('gDimR').style.width = (side * 2) + 'px';
