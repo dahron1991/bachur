@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-6pP37/wc8m2W+4WxJO+CTEXSyqIFTSBAv1mMe8G7I5c=';
+  script-src 'sha256-U3dNtoYetKRzFoD9/6cOuaKWZpabCdsECb7FaHPcn14=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -406,6 +406,10 @@ body{
 #login{
   position:fixed; inset:0; z-index:90; background:var(--cream);
   display:grid; place-items:center; padding:24px;
+  /* חובה מרגע שיש כאן יותר מילד אחד: בלי זה הרשת מותחת את שתי
+     השורות לגובה המסך ומרכזת כל אחת בשורה שלה — כלומר הכרטיס
+     למעלה, הצעת ההתקנה למטה, ותהום באמצע. */
+  align-content:center;
   transition:opacity .3s;
 }
 #login.hide{opacity:0; pointer-events:none;}
@@ -441,6 +445,54 @@ body{
   font-size:11.5px; line-height:1.6; color:var(--ink-soft);
   margin-top:20px; padding:11px 13px; background:#F4EFE4;
   border-radius:10px; border-inline-start:3px solid var(--wood-soft); text-align:start;
+}
+
+/* ===== הצעת ההתקנה, בתחתית מסך הכניסה ===== */
+.install-box{width:100%; max-width:340px; margin:24px auto 0; text-align:center;}
+.ib-why{font-size:12.5px; line-height:1.55; color:var(--ink-soft); margin:0 0 10px;}
+.install-box .btn{width:100%; min-height:46px; font-size:14.5px;}
+.ib-how{
+  font-size:12.5px; line-height:1.75; color:var(--ink-soft);
+  margin:0; padding:12px 13px; background:#F4EFE4; border-radius:10px;
+  border-inline-start:3px solid var(--wood-soft); text-align:start;
+}
+.ib-how b{color:var(--ink);}
+
+/* ===== נעילה בדפדפן פנימי =====
+   z-index 96 — מעל מסך הכניסה (90) ומעל מסך החיתוך (95), כי זו
+   השכבה היחידה שאסור ששום דבר יכסה. */
+#iabLock{
+  position:fixed; inset:0; z-index:96;
+  background:rgba(31,24,18,.93);
+  display:grid; place-items:center;
+  padding:26px;
+  padding-top:calc(26px + env(safe-area-inset-top));
+  padding-bottom:calc(26px + env(safe-area-inset-bottom));
+}
+#iabLock[hidden]{display:none;}   /* חובה: display:grid גובר על hidden */
+.lock-card{
+  width:100%; max-width:330px; text-align:center;
+  background:var(--paper); border-radius:18px; padding:26px 22px 14px;
+}
+.lock-icon{
+  width:52px; height:52px; margin:0 auto 14px; border-radius:15px;
+  background:#F4EADA; color:var(--wood); display:grid; place-items:center;
+}
+.lock-card h2{font-family:var(--font-name); font-size:21px; margin:0 0 9px;}
+.lock-card p{font-size:13.5px; line-height:1.6; color:var(--ink-soft); margin:0 0 18px;}
+.lock-card .btn{width:100%;}
+.lock-how{
+  font-size:12.5px; line-height:1.75; color:var(--ink-soft) !important;
+  margin:12px 0 0 !important; padding:12px 13px; background:#F4EFE4;
+  border-radius:10px; border-inline-start:3px solid var(--wood-soft); text-align:start;
+}
+.lock-how b{color:var(--ink);}
+/* "יציאה" שקטה בכוונה: היא קיימת כדי שאיש לא ייתקע, לא כדי
+   להתחרות בפתיחה בדפדפן. */
+.lock-exit{
+  display:block; width:100%; margin-top:4px; padding:13px 0;
+  background:none; border:none; cursor:pointer;
+  font-family:var(--font-ui); font-size:13.5px; color:var(--ink-soft);
 }
 
 
@@ -1170,6 +1222,39 @@ mark{
     <p class="login-note" id="loginNote" hidden>זו תצוגת הדגמה מקומית.
     הסיסמה נבדקת כאן בדפדפן ואין גישה לנתונים אמיתיים.</p>
   </div>
+
+  <!-- הצעת ההתקנה. נולדת מוסתרת ונפתחת רק כשיש מה להציע: באנדרואיד
+       כשהדפדפן מודיע שאפשר להתקין, ובאייפון — שבו אין הודעה כזאת
+       ואין שום דרך לפתוח את ההתקנה מתוך דף — הוראה במקום כפתור. -->
+  <div class="install-box" id="installBox" hidden>
+    <p class="ib-why">כדי שייפתח כמו אפליקציה, בלי שורת כתובת,
+      ושהכניסה תישמר.</p>
+    <button class="btn btn-ghost" id="installGo" hidden>הוספה למסך הבית</button>
+    <p class="ib-how" id="installHow" hidden></p>
+  </div>
+</div>
+
+<!-- נעילה בדפדפן פנימי של אפליקציה אחרת (וואטסאפ וחבריו).
+     לא אזהרה שאפשר לפספס: שכבה על כל המסך. הסיבה אינה קוסמטית —
+     שם אי אפשר להתקין כלל, והאחסון נפרד ולעיתים נמחק, כלומר
+     הסיסמה תידרש שוב ושוב והמשפחה תחשוב שמשהו שבור. -->
+<div id="iabLock" hidden>
+  <div class="lock-card">
+    <div class="lock-icon">
+      <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="10.5" width="16" height="10.5" rx="2.5"/>
+        <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>
+      </svg>
+    </div>
+    <h2>צריך לפתוח בדפדפן</h2>
+    <p>נכנסתם דרך קישור בתוך אפליקציה אחרת. כאן אי אפשר להוסיף
+      את נצר למסך הבית, והכניסה לא נשמרת — תתבקשו סיסמה כל פעם
+      מחדש.</p>
+    <button class="btn btn-primary" id="iabOpen">פתיחה בדפדפן</button>
+    <p class="lock-how" id="iabHow" hidden></p>
+    <button class="lock-exit" id="iabExit">יציאה</button>
+  </div>
 </div>
 
 <header class="topbar" id="topbar">
@@ -1191,6 +1276,10 @@ mark{
     <button class="chip" id="btnNoteReq" hidden>הוספת פתק</button>
     <button class="chip" id="btnAll">פריסה מלאה</button>
     <button class="chip" id="btnCenter">מרכוז</button>
+    <!-- דרך חזרה: מי שסגר את ההצעה במסך הכניסה לא רואה אותה שוב,
+         כי מסך הכניסה מדולג אחרי הפעם הראשונה. הפריט הזה מופיע
+         רק כשיש מה להתקין, ונעלם ברגע שהותקן. -->
+    <button class="chip" id="btnInstall" hidden>הוספה למסך הבית</button>
     <div class="admin-box" id="adminBox" hidden>
       <button class="chip" id="btnReq" hidden>בקשות</button>
       <button class="chip" id="btnEditMode">מצב עריכה</button>
@@ -1201,7 +1290,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 18:14</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 21:56</p>
   </div>
 </header>
 
@@ -6638,6 +6727,133 @@ if(SUPA.enabled) setInterval(reconcile, 300000);
 if(SUPA.enabled) resumeSession();
 
 addEventListener('resize', () => apply());
+
+
+/* ============================================================
+   20. התקנה בטלפון, ודפדפן פנימי
+   ============================================================ */
+
+/* מותקן = רץ כאפליקציה ולא בלשונית.
+   זו הבדיקה הראשונה בכל שאלה כאן, ולא מטעמי סדר: באייפון מזהה
+   הדפדפן של אפליקציה מותקנת נראה בדיוק כמו של דפדפן פנימי —
+   בשניהם חסר הסימן 'Safari/'. בלי הבדיקה הזאת האפליקציה
+   המותקנת הייתה נועלת את עצמה בהודעה "פתחו בדפדפן". */
+function isStandalone(){
+  try{
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches)
+        || navigator.standalone === true;
+  }catch(e){ return false; }
+}
+const UA_S   = navigator.userAgent || '';
+const IS_IOS = /iPhone|iPad|iPod/.test(UA_S);
+/* זיהוי דפדפן פנימי הוא ניחוש לפי מזהה הדפדפן — אין שום ממשק
+   ששואל את זה. לכן הוא שמרני: אפליקציות שמצהירות על עצמן בשם,
+   באייפון היעדר 'Safari/' (שקיים בספארי, בכרום ובפיירפוקס),
+   ובאנדרואיד הסימן 'wv' שמציין WebView. טעות לכיוון השני —
+   נעילה של מי שלא צריך — גרועה בהרבה מהחמצה. */
+const IAB_APPS = /(WhatsApp|FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\/|Twitter|TikTok|musical_ly|BytedanceWebview|MicroMessenger|Snapchat|Pinterest)/i;
+function isInApp(){
+  if(isStandalone()) return false;
+  if(IAB_APPS.test(UA_S)) return true;
+  if(IS_IOS) return !/Safari\//.test(UA_S);
+  return /;\s*wv[;)]/.test(UA_S);
+}
+
+/* האירוע שכרום שולח כשאפשר להתקין. חייבים לעצור אותו, אחרת
+   הדפדפן מציג באנר משלו — ואז יש שתי הצעות על אותו מסך. */
+let installEvent = null;
+const installBox = document.getElementById('installBox');
+const installGo  = document.getElementById('installGo');
+const installHow = document.getElementById('installHow');
+const btnInstall = document.getElementById('btnInstall');
+
+const IOS_HOW =
+  'הקישו על <b>כפתור השיתוף</b> בתחתית המסך (ריבוע עם חץ כלפי מעלה), ' +
+  'גללו ובחרו <b>הוספה למסך הבית</b>.';
+
+/* מצב אחד, שתי נקודות תצוגה. נקרא גם אחרי התקנה וגם אחרי יציאה,
+   ולכן הוא מסתיר באותה מידה שהוא מציג. */
+function syncInstallUI(){
+  const canPrompt = !!installEvent;
+  const iosHint   = IS_IOS && !isStandalone() && !isInApp();
+  const show      = !isStandalone() && !isInApp() && (canPrompt || iosHint);
+  if(installBox){
+    installBox.hidden = !show;
+    if(installGo)  installGo.hidden  = !canPrompt;
+    if(installHow){
+      installHow.hidden = !(show && !canPrompt);
+      if(!installHow.hidden) installHow.innerHTML = IOS_HOW;
+    }
+  }
+  if(btnInstall) btnInstall.hidden = !show;
+}
+
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installEvent = e;
+  syncInstallUI();
+});
+addEventListener('appinstalled', () => {
+  installEvent = null;
+  syncInstallUI();
+  toast('נצר נוסף למסך הבית');
+});
+
+/* ההצעה נשרפת אחרי שימוש אחד: אותו אירוע אינו ניתן להצגה
+   פעמיים, ולכן הוא נמחק ולא משוחזר. */
+async function runInstall(){
+  if(!installEvent) return false;
+  const ev = installEvent;
+  installEvent = null;
+  try{ ev.prompt(); await ev.userChoice; }catch(e){}
+  syncInstallUI();
+  return true;
+}
+if(installGo) installGo.onclick = runInstall;
+if(btnInstall) btnInstall.onclick = async () => {
+  closeMore();
+  if(await runInstall()) return;
+  openPanel('הוספה למסך הבית', '<p class="note">' + IOS_HOW + '</p>');
+};
+
+/* ---------- הנעילה בדפדפן פנימי ---------- */
+function wireIabLock(){
+  const lock = document.getElementById('iabLock');
+  if(!lock) return;
+  if(!isInApp()) return;                      // נשאר hidden
+  lock.hidden = false;
+  const how = document.getElementById('iabHow');
+  document.getElementById('iabExit').onclick = () => { lock.hidden = true; };
+  document.getElementById('iabOpen').onclick = () => {
+    const url = location.href.split('#')[0];
+    /* מעתיקים תמיד, לפני כל ניסיון פתיחה: אם הפתיחה לא תעבוד —
+       וזה המצב הרגיל באייפון, שבו אין שום דרך לפתוח את ספארי
+       מתוך דף — הקישור כבר ביד, והדבקה בדפדפן תמיד עובדת. */
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(url).catch(() => {});
+    }catch(e){}
+    how.innerHTML = IS_IOS
+      ? 'הקישור הועתק. הקישו על <b>כפתור השיתוף</b> ואז על ' +
+        '<b>פתיחה בספארי</b> — או הדביקו את הקישור בספארי.'
+      : 'הקישור הועתק. אם הדפדפן לא נפתח מעצמו: <b>שלוש הנקודות</b> ' +
+        'למעלה ואז <b>פתיחה בדפדפן</b>.';
+    how.hidden = false;
+    if(!IS_IOS){
+      /* כתובת intent פותחת את כרום מתוך WebView של אנדרואיד.
+         מארח שחוסם אותה פשוט לא יעשה כלום — ולכן ההוראה הידנית
+         כבר מוצגת, ולא מחכה לכישלון שאי אפשר לזהות. */
+      const bare = url.replace(/^https?:\/\//, '');
+      setTimeout(() => {
+        location.href = 'intent://' + bare +
+          '#Intent;scheme=https;package=com.android.chrome;end';
+      }, 60);
+    }
+  };
+}
+
+wireIabLock();
+syncInstallUI();
 
 /* --- הפעלה ראשונה --- */
 layout();
