@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-PNll9ja8/QodHs00JCKzGKM+BNiQEK8C6dYa9+IkLhQ=';
+  script-src 'sha256-e6PWQnFqA3nxqxWf62jqA5ntpOLM1jLs7mLXYDnM6cE=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1179,7 +1179,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:54</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 09:19</p>
   </div>
 </header>
 
@@ -1782,6 +1782,13 @@ function markPhotoForUpload(p, d){
   if(!SUPA.enabled) return;
   if(isDataUrl(d.photo)){
     p.pendingPhoto = {full: d.photo, thumb: d.thumb || d.photo};
+    /* החלפת תמונה. עד כאן הקבצים הישנים נשארו באחסון לנצח:
+       ההעלאה פשוט דרסה את הנתיבים ברשומה, ואיש לא חזר אליהם.
+       הם נרשמים כאן למחיקה, והיא מתבצעת רק אחרי שההעלאה החדשה
+       הצליחה — pushPhotos מעלה קודם ומוחק אחר כך, ונעצר בשגיאה
+       באמצע. כך תקלה ברשת אינה משאירה את האדם בלי תמונה בכלל. */
+    const old = [p.photoPath, p.thumbPath].filter(Boolean);
+    if(old.length) p.dropPhoto = (p.dropPhoto || []).concat(old);
   } else if(!d.photo && (p.photoPath || p.thumbPath)){
     /* התמונה הוסרה: הנתיבים יורדים מהרשומה, והקבצים יימחקו
        מהאחסון כדי שלא יתפסו מקום לנצח. */
@@ -1814,10 +1821,16 @@ async function pushPhotos(){
   }
   const drop = Object.values(DB.people).filter(p => p.dropPhoto);
   for(const p of drop){
-    await api('/functions/v1/photos', {method:'POST',
-      body: {action:'remove', paths: p.dropPhoto}}).catch(() => {});
+    /* רשת ביטחון: אם ההעלאה החדשה קיבלה במקרה אותו נתיב, המחיקה
+       הייתה מוחקת דווקא את התמונה החדשה. */
+    const paths = p.dropPhoto.filter(x => x && x !== p.photoPath && x !== p.thumbPath);
+    if(paths.length)
+      await api('/functions/v1/photos', {method:'POST',
+        body: {action:'remove', paths}}).catch(() => {});
     delete p.dropPhoto;
-    delete p.photo; delete p.thumb;
+    /* בהסרה אין יותר תמונה, ואילו בהחלפה p.photo כבר מחזיק את
+       הקישור החתום החדש — ניקוי שלו היה מרוקן את הכרטיס. */
+    if(!p.photoPath){ delete p.photo; delete p.thumb; }
   }
 }
 
