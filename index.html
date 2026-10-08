@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-sXEyuuihjFIwfIYQzWTWH75HEsH3Wt6a9GVwa+BKsB8=';
+  script-src 'sha256-HcvPTdYhpYdqzhNrhIb39Zp+9q3kdBWnhD87vFnIqDQ=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -322,7 +322,9 @@ body{
    height:100% בתוך grid עם שורה אוטומטית, ונופל ליחס הטבעי של
    התמונה. תמונה לאורך הייתה אז גולשת מהעיגול ודורסת את השם.
    הכלל הזה תופס כל עיגול תמונה באפליקציה. */
-.dot img, .photo-pick .prev img, .big-avatar img{
+/* .big-avatar ירד מהרשימה: מאז שהתצוגה המוגדלת מציגה את התמונה
+   השלמה, העיגול הזה מחזיק אות בלבד ולעולם לא תמונה. */
+.dot img, .photo-pick .prev img{
   align-self:stretch; justify-self:stretch;
   width:100%; height:100%; min-width:0; min-height:0;
   object-fit:cover; display:block;
@@ -820,6 +822,25 @@ mark{
   opacity:0; pointer-events:none; transition:opacity .2s;
 }
 #lightbox.show{opacity:1; pointer-events:auto;}
+/* הבמה תופסת את כל המסך, ולא רק את גוף התמונה: גם כדי לרכז את
+   התמונה, וגם כדי שהגרירה בזום תעבוד בכל נקודה על המסך ולא
+   תיעצר ברגע שהאצבע יוצאת מגבולות התמונה. */
+.lb-stage{
+  position:absolute; inset:0; display:grid; place-items:center;
+  overflow:hidden;
+  touch-action:none;              /* חובה: המחווה שלנו, לא של הדפדפן */
+}
+/* התמונה מוצגת שלמה — אותו חיתוך בדיוק שנשמר ושמוצג ברצועת
+   הכרטיס. קודם היה כאן עיגול, כלומר תצוגה "מוגדלת" שהראתה פחות
+   מן הכרטיס עצמו: החיתוך העגול הוריד את הפינות ואת רוב רוחב
+   התמונה. בלי object-fit ובלי חיתוך — מה שיש בקובץ, זה מה
+   שנראה; ומה שמעבר לזה, הזום מגלה. */
+.lb-img{
+  max-width:100vw; max-height:88vh; display:block;
+  transform-origin:0 0;           /* חובה לחשבון הזום סביב האצבעות */
+  -webkit-user-drag:none; user-select:none;
+}
+/* נשאר רק למי שאין לו תמונה: עיגול עם האות הראשונה. */
 .big-avatar{
   width:min(72vw,320px); aspect-ratio:1; border-radius:50%;
   display:grid; place-items:center;
@@ -828,7 +849,6 @@ mark{
   transform:scale(.88); transition:transform .22s cubic-bezier(.34,1.3,.64,1);
 }
 #lightbox.show .big-avatar{transform:scale(1);}
-.big-avatar img{width:100%; height:100%; border-radius:50%; object-fit:cover;}
 
 /* ============================================================
    5. טבעת הפעולות — נפתחת בלחיצה ארוכה
@@ -1179,7 +1199,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 17:05</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 17:35</p>
   </div>
 </header>
 
@@ -1210,7 +1230,7 @@ mark{
   <div class="panel-body" id="panelBody"></div>
 </section>
 
-<div id="lightbox"><div class="big-avatar" id="bigAvatar"></div></div>
+<div id="lightbox"><div class="lb-stage" id="bigAvatar"></div></div>
 
 <div id="cropper">
   <h3>חיתוך התמונה<span>גררו והתקרבו כך שהראש יתיישב בתוך הסימון. הוא קטן בכוונה — תמונה טובה צריכה אוויר מעל הראש.</span></h3>
@@ -3027,23 +3047,128 @@ function relationText(id){
   return bits.join(' · ') || 'שורש העץ';
 }
 
-/* תצוגה מוגדלת של התמונה */
-const lightbox = document.getElementById('lightbox');
+/* ===== תצוגה מוגדלת של התמונה =====
+   התמונה נפתחת שלמה, באותו חיתוך שנשמר ושמוצג ברצועת הכרטיס,
+   ומעליה זום בשתי אצבעות. אין שום סמל שמסביר את הזום במכוון:
+   מי שלא ינסה רואה בכל מקרה את התמונה המלאה, ומי שינסה מקבל
+   יותר — כלומר אי־ידיעה אינה מחסירה דבר. */
+const lightbox  = document.getElementById('lightbox');
 const bigAvatar = document.getElementById('bigAvatar');
+const lbImg = () => bigAvatar.querySelector('.lb-img');
+
+/* z — הגדלה, x/y — הזזה, w/h — מידות הפריסה (בלי הטרנספורם),
+   L/T — הפינה שאליה x/y מתווספים. pts — האצבעות שעל המסך. */
+const LB = {z:1, x:0, y:0, w:0, h:0, L:0, T:0,
+            pts:new Map(), dist:0, z0:1, moved:0, multi:false};
+
+/* נמדד מחדש בכל תחילת מחווה ולא פעם אחת: אחרי סיבוב המסך, ואחרי
+   שהגרסה החדה מחליפה את הקטנה, המקום והמידות אחרים. */
+function lbMeasure(){
+  const el = lbImg();
+  if(!el) return false;
+  LB.w = el.offsetWidth; LB.h = el.offsetHeight;
+  const r = el.getBoundingClientRect();
+  LB.L = r.left - LB.x; LB.T = r.top - LB.y;
+  return !!(LB.w && LB.h);
+}
+/* הגבולות: תמונה שקטנה מהמסך ננעלת במרכזו, ותמונה שגדולה ממנו
+   אינה נגררת עד שייפער פס ריק בצד. בלי זה היא נעלמת מהמסך
+   בגרירה אחת, ואין שום רמז לאן היא הלכה. */
+function lbFix(){
+  const W = innerWidth, H = innerHeight;
+  const w = LB.w * LB.z, h = LB.h * LB.z;
+  LB.x = w <= W ? (W - w) / 2 - LB.L
+                : Math.min(-LB.L, Math.max(W - w - LB.L, LB.x));
+  LB.y = h <= H ? (H - h) / 2 - LB.T
+                : Math.min(-LB.T, Math.max(H - h - LB.T, LB.y));
+}
+function lbDraw(){
+  const el = lbImg();
+  if(el) el.style.transform =
+    'translate(' + LB.x + 'px,' + LB.y + 'px) scale(' + LB.z + ')';
+}
+function lbReset(){
+  LB.z = 1; LB.x = 0; LB.y = 0; LB.dist = 0; LB.moved = 0; LB.multi = false;
+  LB.pts.clear();
+  const el = lbImg();
+  if(el) el.style.transform = '';   // ריק, ולא scale(1): כך הריכוז חוזר לפריסה
+}
+function closePhoto(){
+  lightbox.classList.remove('show');
+  lbReset();
+}
+
 function openPhoto(p){
   if(!p) return;
-  bigAvatar.style.background = p.gender === 'male' ? 'var(--male)' : 'var(--female)';
-  bigAvatar.innerHTML = avatarInner(p, true);
+  /* בלי full/thumb: את התמונה השלמה מציגים שלמה. */
+  bigAvatar.innerHTML = imgTag(p.photo || p.thumb, 'class="lb-img" alt=""')
+    || ('<div class="big-avatar" style="background:' + tintOf(p) + '"><span>' +
+        (p.placeholder ? '?' : esc(p.name.charAt(0))) + '</span></div>');
+  lbReset();
   lightbox.classList.add('show');
-  /* הגרסה הגדולה נשלפת רק עכשיו — אדם אחד, לא 250.
-     עד שהיא מגיעה מוצגת הקטנה, ואז מתחלפת. */
+  /* הגרסה הגדולה נשלפת רק עכשיו — אדם אחד, לא 250. עד שהיא
+     מגיעה מוצגת הקטנה, ואז מתחלפת במקום: בנייה מחדש של האלמנט
+     הייתה מאפסת זום שהמשתמש כבר עשה. */
   if(SUPA.enabled && p.photoPath && !p.photo){
     attachFullPhoto(p).then(() => {
-      if(lightbox.classList.contains('show')) bigAvatar.innerHTML = avatarInner(p, true);
-    });
+      const el = lbImg();
+      if(el && lightbox.classList.contains('show') && imgTag(p.photo)) el.src = p.photo;
+    }).catch(() => {});
   }
 }
-lightbox.addEventListener('click', () => lightbox.classList.remove('show'));
+
+const lbMid = () => {
+  const a = [...LB.pts.values()];
+  return {x:(a[0].x + a[1].x) / 2, y:(a[0].y + a[1].y) / 2};
+};
+const lbDist = () => {
+  const a = [...LB.pts.values()];
+  return Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1;
+};
+bigAvatar.addEventListener('pointerdown', e => {
+  LB.pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  /* לכידה: בלעדיה אצבע שיוצאת מגבולות התמונה מפסיקה לשלוח
+     pointermove, והזום נתקע באמצע. */
+  try{ bigAvatar.setPointerCapture(e.pointerId); }catch(_){}
+  if(LB.pts.size === 1){ LB.moved = 0; LB.multi = false; lbMeasure(); }
+  if(LB.pts.size === 2){ LB.multi = true; LB.dist = lbDist(); LB.z0 = LB.z; }
+});
+bigAvatar.addEventListener('pointermove', e => {
+  const prev = LB.pts.get(e.pointerId);
+  if(!prev) return;
+  LB.pts.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  LB.moved += Math.abs(e.clientX - prev.x) + Math.abs(e.clientY - prev.y);
+  if(!lbImg()) return;
+  if(LB.pts.size === 1){
+    if(LB.z <= 1) return;           // בזום 1 התמונה כולה על המסך, אין לאן לגרור
+    LB.x += e.clientX - prev.x;
+    LB.y += e.clientY - prev.y;
+  } else if(LB.pts.size === 2 && LB.dist){
+    const m = lbMid();
+    const nz = Math.max(1, Math.min(6, LB.z0 * (lbDist() / LB.dist)));
+    /* מתקרבים סביב הנקודה שבין האצבעות ולא סביב מרכז התמונה:
+       אחרת מה שמסתכלים עליו בורח מהמסך בדיוק כשמתקרבים אליו. */
+    const px = (m.x - LB.L - LB.x) / LB.z, py = (m.y - LB.T - LB.y) / LB.z;
+    LB.z = nz;
+    LB.x = m.x - LB.L - px * nz;
+    LB.y = m.y - LB.T - py * nz;
+  } else return;
+  lbFix(); lbDraw();
+});
+const lbUp = e => {
+  if(!LB.pts.has(e.pointerId)) return;
+  LB.pts.delete(e.pointerId);
+  if(LB.pts.size < 2) LB.dist = 0;
+  if(LB.pts.size) return;
+  /* נגיעה קצרה: במצב מוגדל — חזרה לתצוגה המלאה, ובתצוגה המלאה —
+     סגירה. כך אין מצב שהתמונה נשארת מוגדלת ואין דרך לצאת, וזו גם
+     הסיבה שאין צורך בכפתור סגירה. */
+  if(LB.moved < 12 && !LB.multi){
+    if(LB.z > 1.01) lbReset(); else closePhoto();
+  }
+};
+bigAvatar.addEventListener('pointerup', lbUp);
+bigAvatar.addEventListener('pointercancel', lbUp);
 
 /* ממרכז את האדם שנבחר, בתוך הרצועה שנשארת גלויה מעל הכרטיסייה */
 function focusOn(id){
@@ -3215,7 +3340,9 @@ function closeSheet(){
   syncChrome();
 }
 document.addEventListener('keydown', e => {
-  if(e.key === 'Escape'){ lightbox.classList.remove('show'); closePanel(); closeSheet(); closeRing(); }
+  /* closePhoto ולא הסרת המחלקה: הזום צריך להתאפס גם ביציאה הזאת,
+     אחרת התמונה הבאה שתיפתח תיפתח מוגדלת וגרורה. */
+  if(e.key === 'Escape'){ closePhoto(); closePanel(); closeSheet(); closeRing(); }
 });
 
 /* גרירת הידית כלפי מטה לסגירה */
@@ -4547,12 +4674,11 @@ function openCropper(file){
   }));
 }
 
-/* full=true לעיגולים הגדולים, שבהם הגרסה הזעירה הייתה נראית מטושטשת */
-const avatarInner = (p, full) => {
-  const src = full ? (p.photo || p.thumb) : (p.thumb || p.photo);
-  return imgTag(src, 'alt=""')
+/* מה שבתוך רצועת התמונה של כרטיס בעץ. הפרמטר full ירד: הוא שירת
+   את התצוגה המוגדלת, שמאז המעבר לתמונה שלמה אינה עוברת כאן. */
+const avatarInner = p =>
+  imgTag(p.thumb || p.photo, 'alt=""')
     || ('<span>' + (p.placeholder ? '?' : esc(p.name.charAt(0))) + '</span>');
-};
 
 /* בוחר תמונה לטופס. קורא את הקובץ בדפדפן ומציג מיד.
    בגרסה המחוברת אותו קובץ יעלה ל-Supabase Storage. */
