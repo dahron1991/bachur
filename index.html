@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-Osut7p0l2C8KBtZe4KpYw2faTNYXow8nW6GRTZ1LYok=';
+  script-src 'sha256-e5miI85GlWT51O07NeWuquy6v3fTqW2dvaBBJX52ngo=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -142,6 +142,12 @@ body{
   background:var(--paper); border:1.5px solid #EDE3D3; border-radius:14px;
   padding:6px; box-shadow:0 10px 30px rgba(51,40,31,.18);
   pointer-events:auto;
+}
+/* חותמת הגרסה: שקטה, אבל תמיד נגישה. התשובה לשאלה "זה כבר
+   התעדכן אצלי?" צריכה לקחת שתי שניות, לא מחזור שאלות. */
+.more .build{
+  margin:8px 4px 2px; font-size:11px; color:var(--wood-soft);
+  text-align:center; letter-spacing:.02em;
 }
 .more .chip{
   width:100%; border:none; background:none; border-radius:9px;
@@ -1162,6 +1168,10 @@ mark{
       <button class="chip" id="btnImport">ייבוא מגיבוי</button>
       <input type="file" id="impFile" accept="application/json,.json" hidden>
     </div>
+    <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
+         באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
+         אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 07:46</p>
   </div>
 </header>
 
@@ -3149,6 +3159,17 @@ function openSheetForce(id, origin){
   if(heroHit) heroHit.onclick = () => openPhoto(p);
   const addN = document.getElementById('addNote');
   if(addN) addN.onclick = () => openNoteRequest(id);
+  /* הרצועה הציגה את התמונה הקטנה (256 פיקסל) על רוחב של 350 —
+     מטושטשת. הגדולה נשלפת רק כאן, לאדם אחד ולא ל-250, בדיוק כמו
+     בתצוגה המוגדלת. מאזין ה-load שכבר קיים על התמונה יתאים את
+     היחס מחדש מעצמו. */
+  if(SUPA.enabled && p.photoPath && !p.photo){
+    attachFullPhoto(p).then(() => {
+      if(openId !== id || !imgTag(p.photo)) return;   // הכרטיס התחלף, או כתובת פסולה
+      sheetBody.querySelectorAll('.hero-wide .shot, .hero-wide .blur')
+        .forEach(el => { el.src = p.photo; });
+    }).catch(() => {});                                // אין רשת — הקטנה נשארת
+  }
   if(p.death) fillHebrewDeath(p);
   document.getElementById('sheetX').onclick = closeSheet;
   const stg = document.getElementById('statsTg');
