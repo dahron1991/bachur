@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-2d9EdB/cq0Yuxbra7zSvH4Fs4b7EpwZzJ0DVd4SF59U=';
+  script-src 'sha256-Osut7p0l2C8KBtZe4KpYw2faTNYXow8nW6GRTZ1LYok=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -949,6 +949,10 @@ mark{
 }
 .hero-wide .shot{position:absolute; inset:0; width:100%; height:100%;
   object-fit:cover; display:block;}
+/* תמונה שצרה מ-5:3 — כל מה שהועלה לפני המעבר ליחס הזה — נחתכה
+   כאן מלמעלה ומלמטה, כלומר דווקא בראש. עם fit היא מוצגת בגובה
+   מלא וממורכזת, והמסגרת מסביבה מתמלאת בעותק המטושטש. */
+.hero-wide.fit .shot{object-fit:contain;}
 /* תמונה ריבועית שהועלתה לפני השינוי: ממורכזת, על עותק מטושטש
    של עצמה. בלי זה היא הייתה נמתחת או מותירה פסים ריקים. */
 .hero-wide .blur{position:absolute; inset:0; width:100%; height:100%;
@@ -3027,6 +3031,26 @@ function focusOn(id){
 
 let sheetOrigin = null;   // מאיפה נפתחה הכרטיסייה, לצורך כפתור חזרה
 
+/* התאמת רצועת התמונה ליחס של התמונה עצמה.
+   כל מה שהועלה לפני המעבר ל-5:3 שמור כריבוע, ו-cover על ריבוע
+   בתוך רצועה רחבה חותך 40% מהגובה — חצי מלמעלה, כלומר את הראש.
+   תמונה צרה מהרצועה מוצגת לכן בגובה מלא וממורכזת, והשוליים
+   מתמלאים בעותק המטושטש שכבר נמצא מאחוריה. */
+function fitHero(root){
+  const el = (root || document).querySelector('.hero-wide .shot');
+  if(!el) return;
+  const box = el.closest('.hero-wide');
+  if(!box) return;
+  const check = () => {
+    const w = el.naturalWidth, h = el.naturalHeight;
+    if(!w || !h) return;              // עוד לא נטענה, או שבורה
+    /* סף קטן, כדי שתמונה שהיא כבר 5:3 לא תיפול לכאן בגלל עיגול */
+    box.classList.toggle('fit', (w / h) < CROP_AR - 0.03);
+  };
+  if(el.complete) check();
+  el.addEventListener('load', check);
+}
+
 function openSheet(id, origin){
   if(openId === id && sheet.classList.contains('show')) return;
   openSheetForce(id, origin);
@@ -3109,6 +3133,7 @@ function openSheetForce(id, origin){
       והמנהל יאשר.</p>`}`;
 
   sheetBody.classList.remove('confirming');
+  fitHero(sheetBody);
   resetScroll(sheetBody);
   sheet.classList.add('show');
   scrim.classList.add('show');
@@ -6097,6 +6122,8 @@ function openNoteRequest(preId){
             '<button class="btn btn-primary" id="nrSend">שליחה לאישור</button>' +
             '<button class="btn btn-ghost" id="nrCancel">ביטול</button></div>' +
           '<p class="send-note">יעבור לאישור מנהל המשפחה, ויופיע בכרטיס רק אחרי שיאשר.</p>';
+
+        fitHero(fm);                 // אותה רצועה, אותה התאמה ליחס
 
         /* המחברת מתארכת לפי הכתיבה, והחתימה יורדת איתה */
         const ta = fm.querySelector('#nrText');
