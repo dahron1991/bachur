@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-HcvPTdYhpYdqzhNrhIb39Zp+9q3kdBWnhD87vFnIqDQ=';
+  script-src 'sha256-6pP37/wc8m2W+4WxJO+CTEXSyqIFTSBAv1mMe8G7I5c=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -21,7 +21,7 @@
   object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#F7F2E8">
-<title>אילן היוחסין</title>
+<title>נצר</title>
 
 <!-- התקנה בטלפון. בלי השורות האלה "הוספה למסך הבית" באייפון פותחת
      את האפליקציה בתוך ספארי, עם שורת הכתובת, וזה נראה כמו אתר
@@ -29,9 +29,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="אילן היוחסין">
+<!-- זה השם שמופיע מתחת לאייקון במסך הבית באייפון. חייב להיות קצר:
+     שם ארוך נחתך שם בשלוש נקודות. -->
+<meta name="apple-mobile-web-app-title" content="נצר">
 <meta name="format-detection" content="telephone=no">
-<meta name="description" content="אילן היוחסין המשפחתי">
+<meta name="description" content="נצר — אילן היוחסין המשפחתי">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <!-- אייקון הלשונית, מוטבע בקובץ עצמו כדי שלא יהיה תלוי בשום דבר -->
@@ -1199,7 +1201,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 17:35</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 18:14</p>
   </div>
 </header>
 
@@ -2581,7 +2583,7 @@ function render(){
     (allK.length && allK.every(u => expanded.has(u.id))) ? 'חזרה לתצוגה שלך' : 'פריסה מלאה';
   const fam = (DB.people[DB.root] || {}).surname || '';
   document.getElementById('brand').textContent =
-    FAMILY.name || (fam ? 'משפחת ' + fam : 'אילן היוחסין');
+    FAMILY.name || (fam ? 'משפחת ' + fam : 'נצר');
   /* גודל המשפחה כולה, ולא מה שפרוס כרגע על המסך — אבל לפי מה
      שהתפקיד רשאי לראות: אורח אינו רואה את המרחפים, ולכן הם גם
      לא נספרים אצלו. ובעץ ריק אין דורות בכלל — קודם היה כתוב
