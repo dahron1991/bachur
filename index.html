@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-snTFC/1Y9hnd2wSx47NO+YQ/Tf3TBxpHvFtzHDa8eNY=';
+  script-src 'sha256-PNll9ja8/QodHs00JCKzGKM+BNiQEK8C6dYa9+IkLhQ=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -945,12 +945,13 @@ mark{
    השליליים. היחס הוא 5:3 — בדיוק מה שהקרופר שומר. */
 .hero-wide{
   position:relative; margin:-6px -20px 0;
-  /* width:100% אינו קישוט. בלעדיו הרוחב אינו "מוחלט", ואז
-     min-height גובר: הדפדפן קובע גובה 200, מכפיל ב-5/3 ומקבל
-     רוחב 333 — בטלפון של 320 הרצועה גלשה מהמסך וגררה גלילה
-     אופקית. עם רוחב מוחלט, היחס קובע את הגובה ו-min-height רק
-     מרים אותו. */
-  width:100%; box-sizing:border-box;
+  /* הרוחב חייב להיאמר במפורש, וחייב לכלול את שני הריפודים.
+     width:100% לבדו היה טעות: הוא נתן לרצועה את רוחב התוכן
+     (בלי 2×20), השוליים השליליים רק הזיזו אותה הצידה, ונפער
+     רווח בן 40 פיקסל בצד אחד. בלי רוחב מפורש בכלל, min-height
+     גבר על היחס — הדפדפן קבע גובה 200, הכפיל ב-5/3 וקיבל רוחב
+     333 שגלש ממסך של 320. calc פותר את שניהם. */
+  width:calc(100% + 40px); box-sizing:border-box;
   aspect-ratio:5 / 3; min-height:200px;
   /* רקע כהה ולא בהיר: הטקסט הלבן יושב עליו, ושכבת ההחשכה שמעל
      התמונה היא rgba — כלומר אם התמונה בהירה והרקע בהיר, אין שום
@@ -1066,7 +1067,9 @@ mark{
 .nb-sign input::placeholder{color:#C3B49C;}
 .nb-sign.bad span{color:var(--clay);}
 .nb-sign.bad input::placeholder{color:#C08478;}
-.hero-wide.inform{margin:16px 0 0; border-radius:14px;}
+/* בטופס הפתק הרצועה אינה שוברת את הריפוד — היא יושבת בתוכו,
+   ולכן גם הרוחב חוזר לרגיל יחד עם השוליים. */
+.hero-wide.inform{margin:16px 0 0; width:100%; border-radius:14px;}
 /* שורה שאומרת לאן הדבר הולך. מתחת לכל כפתור אישור סופי של אורח. */
 .send-note{
   margin:10px 0 0; font-size:12.5px; line-height:1.6;
@@ -1176,7 +1179,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:34</p>
+    <p class="build" id="buildStamp">גרסה 8.10.2026 · 08:54</p>
   </div>
 </header>
 
@@ -3063,7 +3066,12 @@ function fitHero(root){
     box.classList.toggle('fit', (w / h) < CROP_AR - 0.03);
   };
   if(el.complete) check();
-  el.addEventListener('load', check);
+  /* פעם אחת לכל תמונה. fitHero נקראת שוב כשהתמונה הגדולה מגיעה
+     ומחליפה את src, ובלי הסימון היו נערמים מאזינים זהים. */
+  if(el.dataset.fitWired !== '1'){
+    el.dataset.fitWired = '1';
+    el.addEventListener('load', check);
+  }
 }
 
 function openSheet(id, origin){
