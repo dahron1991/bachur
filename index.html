@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-A0/hpQJJhHJZ0ONsnGRpDgnW2FzOfPMyOkMrM2iXujk=';
+  script-src 'sha256-i2PLtvyJdmOFQux9lJvmSrWi7Kbj9uRgnwLczu6xqBE=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -81,6 +81,12 @@ body{
   color:var(--ink);
   overscroll-behavior:none;
   -webkit-user-select:none; user-select:none;
+  /* בלי זה, לחיצה ארוכה על תמונה בכרטיס פותחת את תפריט התמונה
+     של הדפדפן — "שמור", "שתף" — במקום את טבעת ההוספה. זה נכון
+     לכל תמונה בעץ ולא רק לממתינים; פשוט לא היו תמונות בעץ
+     בזמן הבדיקה. באייפון זה הדגל הזה, ובאנדרואיד ביטול אירוע
+     התפריט על אזור העץ (ראו למטה). */
+  -webkit-touch-callout:none;
 }
 
 /* ============================================================
@@ -341,7 +347,10 @@ body{
   font-family:var(--font-name); font-weight:700; font-size:40px; color:#fff;
   background:var(--wood-soft);
 }
-.node .face img{width:100%; height:100%; object-fit:cover; display:block;}
+/* התמונה שקופה למגע: המחווה מגיעה לכרטיס עצמו, ולדפדפן אין
+   תמונה להציע עליה תפריט. */
+.node .face img{width:100%; height:100%; object-fit:cover; display:block;
+  pointer-events:none; -webkit-user-drag:none;}
 .node .face span{color:#fff;}
 .node[data-gender="male"]   .face{background:var(--male);}
 .node[data-gender="female"] .face{background:var(--female);}
@@ -394,9 +403,16 @@ body{
    הגבול המקווקו הוא הסימן החזק ביותר שאפשר לתת בלי להפוך את
    העץ לרועש, והוא מוסבר ברצועה שלמעלה. */
 .node.pending{
-  border-style:dashed; opacity:.72;
-  box-shadow:none; background:#FBF7EF;
+  /* אטום לגמרי, ולא שקוף למחצה. בשקיפות נראו קווי החיבור שמאחורי
+     הכרטיס — הם מצוירים ב-SVG מתחת לכל הכרטיסים, ובכרטיס רגיל
+     הרקע האטום מסתיר אותם. לסדר את הקווים כדי שיתאימו לשקיפות
+     היה שינוי במנוע הפריסה בשביל אפקט, והסימון המקווקו אומר את
+     אותו דבר בלי לגעת בכלום. */
+  border-style:dashed; border-width:3px; border-color:var(--clay);
+  box-shadow:none;
 }
+/* גובר על צבע הגבול לפי דור, שמוגדר למעלה באותה דרגת ספציפיות */
+.node.pending[data-gen]{border-color:var(--clay);}
 
 /* הרצועה שמסבירה אותם */
 .pend-bar{
@@ -1328,7 +1344,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:46</p>
+    <p class="build" id="buildStamp">גרסה 10.10.2026 · 00:16</p>
   </div>
 </header>
 
@@ -7513,6 +7529,13 @@ if(SUPA.enabled) resumeSession();
 layout();
 render();
 center(false);
+
+/* תפריט ההקשר על אזור העץ מבוטל: באנדרואיד זה מה שמונע את
+   תפריט התמונה בלחיצה ארוכה, ובמחשב את תפריט הקליק הימני על
+   הלוח. אין בעץ טקסט שמישהו מעתיק, ולכן אין מה לאבד — והמחווה
+   שאנחנו מצפים לה היא הוספה, לא "שמור תמונה". */
+document.getElementById('viewport')
+  .addEventListener('contextmenu', e => e.preventDefault());
 
 /* פתיחה וסגירה של ענפים */
 nodesEl.addEventListener('click', e => {
