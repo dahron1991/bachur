@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-5nRdJDA55LxDnW1OgpV/LS3kW8Zljjk15RprD3G2avA=';
+  script-src 'sha256-3oSIae91Ys6kEW25XTssATsoa2E668OsqrHwShWJtiw=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1328,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 22:12</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 22:45</p>
   </div>
 </header>
 
@@ -1469,6 +1469,26 @@ try { TOKEN = localStorage.getItem(TOKEN_KEY) || null; } catch(e){ TOKEN = null;
 const saveToken = t => {
   TOKEN = t;
   try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch(e){}
+};
+
+/* ---------- מי ממלא את הפרטים ----------
+   נזכר לכל **פתיחה** של האפליקציה, ולא לכל אסימון: sessionStorage
+   נמחק כשסוגרים אותה, והאסימון מחזיק חודש. מי שפותח רושם את שמו
+   פעם אחת, וכל בקשות ההוספה והעריכה שלו באותה ישיבה נושאות אותו
+   — במקום להקליד אותו מחדש בכל אדם, שזה גם מה שגרם לענף שלם
+   לצאת עם שמות שונים בלי שאיש התכוון.
+
+   **פתקים אינם משתמשים בזה.** שם דווקא סביר שכמה אנשים כותבים
+   בזה אחר זה על אותו טלפון, כל אחד זיכרון משלו, ומילוי אוטומטי
+   היה חותם את כולם בשם אחד. */
+const SENDER_KEY = 'bachur.sender';
+const senderName = () => {
+  try { return sessionStorage.getItem(SENDER_KEY) || ''; } catch(e){ return ''; }
+};
+const rememberSender = v => {
+  const s = (v || '').trim();
+  if(!s) return;
+  try { sessionStorage.setItem(SENDER_KEY, s); } catch(e){}
 };
 
 /* פנייה לשרת. מחזירה את גוף התשובה, או זורקת שגיאה בעברית. */
@@ -3777,8 +3797,10 @@ function nameHints(anchorId, kind, gender){
 
 function openForm(anchorId, kind){
   if(!DB.people[anchorId]){ toast('האדם הזה כבר לא קיים בעץ'); return closePanel(); }
+  /* השם נזכר מהפעם הקודמת באותה פתיחה של האפליקציה, ולכן מי
+     שמוסיף ענף שלם מקליד אותו פעם אחת. הוא עדיין ניתן לעריכה. */
   draft = draft && draft.keep ? draft
-        : {by:'', gender:'', name:'', surname:'', maiden:'', birth:'', death:'',
+        : {by:senderName(), gender:'', name:'', surname:'', maiden:'', birth:'', death:'',
            city:'', phone:'', email:'', photo:'', surTouched:false};
   draft.keep = false;
   draft.anchor = anchorId; draft.kind = kind;
@@ -3838,6 +3860,8 @@ function openForm(anchorId, kind){
       grab();
       const err = t => showFormError(panelBody, 'fErr', t);
       if(!isAdmin() && !(draft.by || '').trim()) return err('צריך לרשום מי ממלא את הפרטים');
+      /* נזכר לשאר הישיבה, כדי שהאדם הבא לא ידרוש הקלדה מחדש */
+      if(!isAdmin()) rememberSender(draft.by);
       const req = {
         id: newRid(), kind: draft.kind, anchor: draft.anchor,
         by: isAdmin() ? 'המנהל' : draft.by.trim(),
@@ -4067,25 +4091,37 @@ function openBranchReview(key){
     return x ? ((x.data.name || '') + ' ' + (x.data.surname || '')).trim() : '';
   };
 
+  /* עומק בשרשרת. ההזחה אינה קישוט: בלעדיה "הורדתי וי מאחד ונפלו
+     עוד שניים" נראה שרירותי, ואי אפשר לראות על המסך מי תלוי במי.
+     עם ההזחה זה פשוט מה שרואים. */
+  const depth = {};
+  list.forEach(r => { depth[r.id] = r.parentReq && (r.parentReq in depth)
+                                    ? depth[r.parentReq] + 1 : 0; });
   const rows = list.map(r => {
     const under = r.parentReq ? nameOfReq(r.parentReq) : fullName(root);
-    return '<label class="br-row" data-rq="' + r.id + '">' +
+    const d = Math.min(depth[r.id] || 0, 4);
+    return '<label class="br-row" data-rq="' + r.id + '"' +
+      (d ? ' style="padding-inline-start:' + (d * 16) + 'px"' : '') + '>' +
       '<input type="checkbox" checked>' +
       dotHTML(r.data.thumb || r.data.photo, (r.data.name || '?').charAt(0),
               r.data.gender === 'male' ? 'var(--male)' : 'var(--female)') +
       '<span class="who"><b>' + esc((r.data.name || '') + ' ' + (r.data.surname || '')) + '</b>' +
       '<span>' + REL[r.kind] + ' של ' + esc(under) + '</span></span></label>';
   }).join('');
+  /* כל מי ששלח, ולא רק הראשון. בענף שנבנה ברצף ייתכן שכמה אנשים
+     מילאו חלקים שונים, והצגת הראשון בלבד הסתירה את זה. */
+  const senders = [...new Set(list.map(r => (r.by || '').trim()).filter(Boolean))];
 
   openPanel('ענף חדש', `
     <div class="form-head">
       <b>${plural(list.length, 'אדם אחד', 'אנשים')} על הענף של ${esc(fullName(root))}</b>
-      <span>${first.by ? 'נשלח על ידי ' + esc(first.by) : 'לא צוין מי שלח'}</span>
+      <span>${senders.length ? 'נשלח על ידי ' + esc(senders.join(', ')) : 'לא צוין מי שלח'}</span>
     </div>
     <div class="br-list">${rows}</div>
-    <p class="imp-note">מה שלא יסומן יישאר בתור וממתין. אי אפשר להוסיף
-      ילד בלי ההורה שעליו הוא תלוי, ולכן הורדת סימון מורידה גם את מי
-      שמתחתיו. לעריכת פרטים — אשרו, ואז ערכו בעץ כרגיל.</p>
+    <p class="imp-note">כל שורה מוזחת תלויה בזו שמעליה. אי אפשר להוסיף
+      אדם בלי מי שהוא נתלה עליו, ולכן הורדת סימון מורידה גם את כל מי
+      שמתחתיו בשרשרת. מה שלא יסומן יישאר בתור וממתין.
+      לעריכת פרטים — אשרו, ואז ערכו בעץ כרגיל.</p>
     <div id="rErr"></div>
     <div id="rActions" class="form-actions">
       <button class="btn btn-primary" id="brOk">אישור והוספה לעץ</button>
@@ -4341,17 +4377,21 @@ function applyRequest(req, opts){
      בלי שום סימן. */
   const p = {id, name: d.name || '', surname: d.surname || '', gender: d.gender};
   reqKeys().forEach(k => { if(d[k] && !(k in p)) p[k] = d[k]; });
-  /* גרסה זעירה בלי מקור אין לה טעם */
-  if(!p.photo) delete p.thumb;
   if(pend){
     /* אדם ממתין אינו נכתב לשום מקום: התמונה שלו כבר נוסעת בתוך
        הבקשה, וסימון להעלאה היה מנסה להעלות אותה שוב — מאורח
-       שאין לו בכלל הרשאה להעלות. הקטנה נשארת, כי היא מה
-       שמצויר בכרטיס שבעץ. */
+       שאין לו בכלל הרשאה להעלות.
+       **הקטנה נשארת, והיא כל התמונה שיש כאן.** הכלל שמתחת,
+       "גרסה זעירה בלי מקור אין לה טעם", נכון לאדם אמיתי שבכרטיס
+       שלו מוצגת המלאה — וכאן הוא מחק בדיוק את מה שאמור להיות
+       מצויר. התוצאה: אורח שבחר תמונה ראה את האדם שהוסיף בלי
+       תמונה בכלל. */
     p.pend = pend;
     if(req.group) p.pendGroup = req.group;
     delete p.photo;
   } else {
+    /* גרסה זעירה בלי מקור אין לה טעם */
+    if(!p.photo) delete p.thumb;
     /* מאיזו בקשה נוצר. בלי זה מי ששלח אותה אינו יכול לדעת
        שהאדם שהופיע בעץ הוא בדיוק שלו, והצל שלו לא היה יורד. */
     if(req.id) p.origin = req.id;
@@ -6477,7 +6517,8 @@ function openEditRequest(){
             '<span>' + esc(personSubtitle(p)) + '</span></div>' +
           personFormHTML(d) +
           '<div class="field"><label>מי ממלא את הפרטים? <span class="req">*</span></label>' +
-            '<input id="erBy" placeholder="השם שלכם, או איך שתזוהו"></div>' +
+            '<input id="erBy" value="' + esc(senderName()) +
+              '" placeholder="השם שלכם, או איך שתזוהו"></div>' +
           '<div id="erErr"></div>' +
           '<div class="form-actions" id="erActions">' +
             '<button class="btn btn-primary" id="erSend">שליחה לאישור</button>' +
@@ -6495,6 +6536,7 @@ function openEditRequest(){
           const by = ((fm.querySelector('#erBy') || {}).value || '').trim();
           if(!by){ fm.querySelector('#erErr').innerHTML =
             '<p class="err">צריך לרשום מי ממלא את הפרטים</p>'; return; }
+          rememberSender(by);        // אותו שם ישמש גם בבקשה הבאה בישיבה
           readPersonForm(fm, d);
           const bad = validatePerson(d) || relationalIssue(p.id, d);
           /* אזהרה רכה מוצגת למשתמש אבל אינה עוצרת את הבקשה.
