@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-hqamENNI9IcQoAWvVIs8M1Mtx/L8fOaHdr1ZHFPS1l8=';
+  script-src 'sha256-A0/hpQJJhHJZ0ONsnGRpDgnW2FzOfPMyOkMrM2iXujk=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1328,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:28</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:46</p>
   </div>
 </header>
 
@@ -4038,6 +4038,18 @@ function openRequests(){
    אורח שבנה אדם, ועליו בן זוג, ועליהם ילד — שלח שלוש בקשות
    שנושאות מזהה קבוצה אחד. התור מציג אותן כפריט אחד, כי זו
    פעולה אחת מבחינתו ולכן גם החלטה אחת מבחינת המנהל. */
+/* החלטה על בקשה — אישור או דחייה — היא פעולה הרסנית, ולכן היא
+   נשלחת **מיד** ולא ממתינה לטיימר.
+   עד כאן מסלולי הדחייה לא סנכרנו כלל: הם קראו ל-refreshReqChip
+   בלבד, והשינוי המתין עד חמש שניות לרשת הביטחון התקופתית. מי
+   שדחה ויצא או רענן בתוך החלון הזה — הדחייה נעלמה, והבקשה חזרה
+   בטעינה הבאה כאילו לא נגע בה. */
+function queueDecided(msg){
+  refreshReqChip();
+  if(msg) toast(msg);
+  if(typeof scheduleSync === 'function') scheduleSync();
+}
+
 const groupKey = r => r.group || r.id;
 
 /* סדר תלות: הורה תמיד לפני מי שנתלה עליו. סדר השליחה כבר נכון
@@ -4198,7 +4210,7 @@ function openBranchReview(key){
           const i = pending.findIndex(x => x.id === r.id);
           if(i >= 0) pending.splice(i, 1);
         });
-        refreshReqChip(); toast('הענף נדחה');
+        queueDecided('הענף נדחה');
         openRequests();
       });
   },
@@ -4295,7 +4307,7 @@ function openRequest(rid){
     g('rNo').onclick = () => confirmStep(
       'למחוק את הבקשה לצמיתות?', 'btn-primary', () => {
         pending.splice(pending.findIndex(x => x.id === rid), 1);
-        refreshReqChip(); toast('הבקשה נדחתה');
+        queueDecided('הבקשה נדחתה');
         openRequests();
       });
   },
@@ -4951,7 +4963,16 @@ document.getElementById('loginGo').onclick = doLogin;
 document.getElementById('loginPass').addEventListener('keydown', e => {
   if(e.key === 'Enter') doLogin();
 });
-document.getElementById('btnLogout').onclick = () => {
+document.getElementById('btnLogout').onclick = async () => {
+  /* יציאה עם שינוי שטרם נשמר מוחקת אותו בלי אזהרה: האסימון יורד,
+     הסנכרון הבא נכשל, והעבודה פשוט איננה. קודם שולחים, ורק אז
+     יוצאים; אם השליחה נכשלה — שואלים במקום לאבד בשקט. */
+  if(SUPA.enabled && hasLocalEdits()){
+    toast('שומר לפני יציאה…');
+    try { await syncNow(); } catch(e){}
+    if(hasLocalEdits() &&
+       !confirm('יש שינוי שטרם נשמר, והיציאה תמחק אותו. לצאת בכל זאת?')) return;
+  }
   saveToken(null);               // יציאה אמיתית: האסימון נמחק
   role = null;
   /* מצב העדכונים נשאר אחרת תלוי בעץ של המשפחה הקודמת */
@@ -7305,7 +7326,7 @@ async function resolvePends(){
   const born = {};
   Object.values(DB.people).forEach(p => { if(p.origin) born[p.origin] = p.id; });
 
-  let alive;
+  let alive = null;
   try{
     const r = await api('/rest/v1/rpc/pending_requests',
                         {method:'POST', body:{p_ids: PENDS.map(g => g.rid)}});
@@ -7313,7 +7334,11 @@ async function resolvePends(){
     alive = new Set(arr.map(x => (x && typeof x === 'object')
                                  ? x.pending_requests || x.id : x).filter(Boolean));
   }catch(e){
-    return false;        // אין רשת: לא מסיקים כלום, הכול נשאר כפי שהוא
+    /* השאלה "מה עוד ממתין" לא נענתה — אין רשת, או שהפונקציה
+       אינה זמינה. אי אפשר להסיק מזה שבקשה נדחתה, ולכן איש לא
+       יורד בגלל זה. אבל מי שכבר **נולד** בעץ ידוע לנו בוודאות
+       גם בלי התשובה, והשארתו תציג אותו פעמיים. */
+    alive = null;
   }
 
   /* ילד של ממתין שאושר צריך להיתלות מעכשיו על האדם האמיתי.
@@ -7323,7 +7348,7 @@ async function resolvePends(){
     if(parent && born[parent.rid]) g.anchor = born[parent.rid];
   });
 
-  const keep = PENDS.filter(g => !born[g.rid] && alive.has(g.rid));
+  const keep = PENDS.filter(g => !born[g.rid] && (alive === null || alive.has(g.rid)));
   const changed = keep.length !== PENDS.length;
   PENDS = keep;
   savePends();
