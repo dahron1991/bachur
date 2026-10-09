@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-3y0IaqBevSBJkBhmB8QsT9vvIMzkvWy/7+TONkPcetI=';
+  script-src 'sha256-B9DNtmde5N32Np8ddXAqWjDtuMh8R7JhTO5FjvpBZCU=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1290,7 +1290,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 8.10.2026 · 22:11</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 17:17</p>
   </div>
 </header>
 
@@ -1900,9 +1900,13 @@ function markPhotoForUpload(p, d){
        באמצע. כך תקלה ברשת אינה משאירה את האדם בלי תמונה בכלל. */
     const old = [p.photoPath, p.thumbPath].filter(Boolean);
     if(old.length) p.dropPhoto = (p.dropPhoto || []).concat(old);
-  } else if(!d.photo && (p.photoPath || p.thumbPath)){
-    /* התמונה הוסרה: הנתיבים יורדים מהרשומה, והקבצים יימחקו
-       מהאחסון כדי שלא יתפסו מקום לנצח. */
+  } else if(d.photoCleared && (p.photoPath || p.thumbPath)){
+    /* d.photoCleared ולא !d.photo: רק לחיצה על "הסרה" מוחקת.
+       התנאי הקודם בדק שדה ריק, והשדה ריק גם כשהתמונה המלאה לא
+       נטענה — ולכן כל עריכה של אדם עם תמונה מחקה לו אותה, יחד
+       עם הקבצים באחסון. מחיקה חייבת לבוא מכוונה מפורשת.
+       הנתיבים יורדים מהרשומה, והקבצים יימחקו כדי שלא יתפסו
+       מקום לנצח. */
     p.dropPhoto = [p.photoPath, p.thumbPath].filter(Boolean);
     delete p.photoPath; delete p.thumbPath; delete p.pendingPhoto;
   }
@@ -5481,7 +5485,10 @@ function personFormHTML(d){
      "שם נעורים" מופיע רק לאישה, ולכן גם ברשימה הוא מותנה —
      אחרת הרשימה מבטיחה שדה שלא יימצא בפנים. */
   const inside = foldSummary(extra, d.gender === 'female');
-  return '<div class="form-fields">' + photoField(d.photo || '', d.name || '') +
+  /* d.thumb כגיבוי ל-d.photo: התמונה המלאה נשלפת רק כשפותחים
+     כרטיס לצפייה, ולכן בטופס העריכה היא לרוב אינה בזיכרון. בלי
+     הגיבוי הטופס הציג "הוספת תמונה" לאדם שיש לו תמונה. */
+  return '<div class="form-fields">' + photoField(d.photo || d.thumb || '', d.name || '') +
     '<div class="field"><label>מגדר</label><div class="pick two">' +
       '<button data-g="male" class="'   + (d.gender==='male'?'on':'')   + '">זכר</button>' +
       '<button data-g="female" class="' + (d.gender==='female'?'on':'') + '">נקבה</button>' +
@@ -5534,7 +5541,13 @@ function wirePersonForm(root, d){
     const w = root.querySelector('#pfMaidenWrap');
     if(w) w.hidden = d.gender !== 'female';
   });
-  wirePhoto(() => d.thumb || d.photo, (full, thumb) => { d.photo = full; d.thumb = thumb; });
+  wirePhoto(() => d.thumb || d.photo, (full, thumb) => {
+    d.photo = full; d.thumb = thumb;
+    /* "הסרה" היא הסימן היחיד שמותר לו למחוק תמונה קיימת. שדה
+       ריק אינו סימן כזה — הוא גם מה שמתקבל כשהתמונה המלאה פשוט
+       לא נטענה, וזה בדיוק מה שמחק תמונות של אנשים שרק נערכו. */
+    d.photoCleared = !full;
+  });
 }
 /* איזה שדה הכשיל את הבדיקה האחרונה. ההודעה מוצגת ליד כפתור השמירה,
    בתחתית הטופס, בזמן שהשדה הבעייתי נמצא לרוב מחוץ למסך למעלה —
@@ -5997,10 +6010,18 @@ function applyFields(p, d){
   ['name','surname','maiden','birth','death','city','phone','email'].forEach(k => {
     if(d[k]) p[k] = d[k]; else delete p[k];
   });
-  /* הזעירה צמודה לגדולה: שתיהן נכנסות יחד ויוצאות יחד,
-     כדי שלא יישאר לעולם כרטיס עם תמונה ישנה בעץ וחדשה בכרטיסייה. */
-  if(d.photo) p.photo = d.photo; else delete p.photo;
-  if(d.photo && d.thumb) p.thumb = d.thumb; else delete p.thumb;
+  /* שלושה מצבים בלבד, ו"לא נגעתי בתמונה" הוא ברירת המחדל: תמונה
+     חדשה, הסרה מפורשת, או כלום. קודם היה כאן `if(d.photo) ... else
+     delete` — כלומר שדה ריק נחשב הסרה. אבל השדה ריק גם כשהתמונה
+     המלאה לא נטענה, וזה המצב הרגיל בטופס העריכה; התוצאה הייתה
+     שעריכת שם או עיר מחקה את התמונה, ואת הקבצים מהאחסון איתה.
+     הזעירה צמודה לגדולה — שתיהן נכנסות יחד ויוצאות יחד. */
+  if(d.photoCleared){
+    delete p.photo; delete p.thumb;
+  } else if(isDataUrl(d.photo)){
+    p.photo = d.photo;
+    if(d.thumb) p.thumb = d.thumb; else delete p.thumb;
+  }
   markPhotoForUpload(p, d);
   if(d.parentUnion !== undefined) applyReparent(p.id, d.parentUnion);
   if(d.spouseOf) { applySpouseLink(p.id, d.spouseOf); d.spouseOf = null; }
