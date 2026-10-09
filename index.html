@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-3oSIae91Ys6kEW25XTssATsoa2E668OsqrHwShWJtiw=';
+  script-src 'sha256-7XVBTPDyJfjoxkmqt/DV4Pt+w7lrVRJecSotMG4r6SI=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1328,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 22:45</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:02</p>
   </div>
 </header>
 
@@ -3884,12 +3884,10 @@ function openForm(anchorId, kind){
       if(bad) toast(softText(bad));        // אזהרה בלבד — הבקשה נשלחת
 
       if(!isAdmin()){
-        /* עוגן שהוא אדם ממתין נשלח כהצבעה ל**בקשה** ולא לאדם —
-           האדם הזה עוד לא קיים בשרת, ואין למה להצביע. מקומית
-           req.anchor ממשיך להצביע אליו, וזה מה שמצייר את הקשר. */
-        const anchorP = DB.people[req.anchor];
-        if(isPending(anchorP)) req.parentReq = anchorP.pend;
+        /* הקבוצה נקבעת לפי העוגן **המקורי**, לפני כל שינוי: היא
+           רק אופן ההצגה בתור — "זה נבנה ברצף אחד" — ואינה תלות. */
         req.group = groupFor(req.anchor);
+        setDependency(req);
         pending.push(req);
         /* האדם נשאר על המסך כדי שאפשר יהיה להמשיך לבנות עליו
            בלי להמתין לאישור. זה כל העניין. */
@@ -4273,6 +4271,46 @@ function openRequest(rid){
       });
   },
   openRequests);
+}
+
+/* ---------- על מה הבקשה באמת תלויה ----------
+   עוגן שהוא אדם ממתין אינו קיים בשרת, ולכן אי אפשר להצביע אליו;
+   הבקשה נתלית על **הבקשה** שתיצור אותו. אבל לא כל קשר באמת תלוי
+   בעוגן:
+
+     ילד, בן זוג, הורה → נקשרים לאדם עצמו. התלות אמיתית.
+     אח                → נדחף לזוגיות **ההורים** של העוגן, ואינו
+                         נוגע בעוגן כלל. התלות בו שקרית.
+
+   וזה לא רק עניין של נוחות במסך האישור: תלות שקרית אומרת למסד
+   למחוק את האח אם ההורה נדחה, דרך המחיקה המדורגת — למרות שאפשר
+   היה להוסיף אותו בלי שום קשר.
+
+   לכן כשהקשר הוא "אח", מחפשים עוגן אמיתי שמצביע על **אותה
+   זוגיות בדיוק**. רק החלפה מדויקת מותרת כאן; כל קירוב היה מכניס
+   אדם לזוגיות הלא נכונה, וזו טעות גרועה בהרבה מתלות מיותרת. */
+function setDependency(req){
+  const a = DB.people[req.anchor];
+  if(!isPending(a)) return;                 // עוגן אמיתי — אין תלות כלל
+
+  if(req.kind === 'sibling'){
+    const u = DB.unions.find(x => x.children.includes(req.anchor));
+    /* זוגיות שנוצרה יחד עם הממתין — התלות בו אמיתית */
+    if(u && !u.pend){
+      /* אח אמיתי באותה זוגיות: "אח שלו" ו"אח שלו" הם אותו דבר */
+      const sib = u.children.find(c => c !== req.anchor && !isPending(DB.people[c]));
+      if(sib){ req.anchor = sib; return; }
+      /* או הורה שזו הזוגיות היחידה שלו, ואז "ילד שלו" זהה
+         ל"אח של הממתין". התנאי על הזוגיות היחידה הכרחי: להורה
+         עם שתי מערכות, "ילד שלו" היה נופל למערכת הראשונה. */
+      const par = u.partners.find(x => {
+        const q = DB.people[x];
+        return q && !isPending(q) && unionsOf(x)[0] === u;
+      });
+      if(par){ req.anchor = par; req.kind = 'child'; return; }
+    }
+  }
+  req.parentReq = a.pend;
 }
 
 /* בדיקות היגיון לפני הכנסה לעץ */
