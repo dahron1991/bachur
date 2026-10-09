@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-B9DNtmde5N32Np8ddXAqWjDtuMh8R7JhTO5FjvpBZCU=';
+  script-src 'sha256-BpllTuv9/fdv7QLx47i2TtOqehJnTAx0NSHee5AqLTY=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -389,6 +389,25 @@ body{
   pointer-events:none;
 }
 
+/* ===== אדם שהאורח הוסיף וטרם אושר =====
+   מקווקו ועמום, ולא צבע אזהרה: זו אינה שגיאה אלא מצב ביניים.
+   הגבול המקווקו הוא הסימן החזק ביותר שאפשר לתת בלי להפוך את
+   העץ לרועש, והוא מוסבר ברצועה שלמעלה. */
+.node.pending{
+  border-style:dashed; opacity:.72;
+  box-shadow:none; background:#FBF7EF;
+}
+
+/* הרצועה שמסבירה אותם */
+.pend-bar{
+  margin:0; align-self:center; max-width:min(92vw, 420px);
+  background:#F4EADA; color:#5E4E3E;
+  border:1px solid #E7DAC4; border-radius:11px;
+  padding:7px 13px; font-size:12px; line-height:1.5; text-align:center;
+  pointer-events:none;        /* אסור שתחסום מחווה על העץ שמתחתיה */
+}
+.pend-bar[hidden]{display:none;}
+
 /* כפתור פתיחה/סגירה של ענף */
 .toggle{
   position:absolute; width:26px; height:26px; border-radius:50%;
@@ -741,14 +760,30 @@ body{
   background:none; border-inline:none; border-top:none; cursor:pointer; text-align:start;
   font-family:var(--font-ui);
 }
-.prow .dot{
+/* שורות הענף במסך הבדיקה. אותו מבנה כמו .prow, עם תיבת סימון
+   במקום החץ — כדי שהמנהל יראה את אותה שורה שהוא מכיר מהתור. */
+.br-list{margin:4px 0 14px;}
+.br-row{
+  display:flex; align-items:center; gap:11px; width:100%;
+  padding:10px 2px; border-bottom:1px solid #F2EADC; cursor:pointer;
+}
+.br-row:last-child{border-bottom:none;}
+.br-row input{
+  flex:none; width:19px; height:19px; accent-color:var(--forest); cursor:pointer;
+}
+/* העיגול והטקסט חולקים את הכללים של שורת התור (ראו למטה),
+   כדי ששתי הרשימות ייראו אותו דבר. רק העמעום של מי שלא מסומן
+   הוא כלל משלו. */
+.br-row input:not(:checked) ~ .dot,
+.br-row input:not(:checked) ~ .who{opacity:.42;}
+.prow .dot, .br-row .dot{
   width:42px; height:42px; border-radius:50%; flex:none;
   display:grid; place-items:center; color:#fff;
   font-family:var(--font-name); font-weight:700; font-size:17px;
 }
 /* מגדר: היום הצבע נמצא רק ברקע העיגול, ולכן מי שיש לו תמונה —
    אין לו סימון כלל. הטבעת גלויה בשני המקרים. */
-.prow .dot.gring{outline:2px solid currentColor; outline-offset:2px;}
+.prow .dot.gring, .br-row .dot.gring{outline:2px solid currentColor; outline-offset:2px;}
 /* מסך "לא נמצא" הוא ההזדמנות הטבעית להוסיף */
 .search-add{margin-top:4px; padding-top:18px; border-top:1px dashed #E6DBC8;}
 .search-add p{margin:0 0 12px; font-size:13px; font-weight:700; color:var(--ink-soft);}
@@ -764,9 +799,9 @@ mark{
   background:rgba(46,93,69,.14); color:var(--forest);
   border-radius:3px; padding:0 1px; font-weight:700;
 }
-.prow .who{flex:1; min-width:0;}
-.prow .who b{display:block; font-size:15px; font-weight:700; color:var(--ink);}
-.prow .who span{font-size:12.5px; color:var(--ink-soft);}
+.prow .who, .br-row .who{flex:1; min-width:0;}
+.prow .who b, .br-row .who b{display:block; font-size:15px; font-weight:700; color:var(--ink);}
+.prow .who span, .br-row .who span{font-size:12.5px; color:var(--ink-soft);}
 .prow .who .meta{display:block; font-size:11.5px; color:var(--wood-soft); margin-top:2px;}
 .prow .cnt{
   /* ברירת המחדל שקטה. מה שרחוק אינו צריך צבע — הוא רק נתון. */
@@ -1269,6 +1304,9 @@ mark{
     <span class="meta" id="brandSub"></span>
     <button class="icon-btn" id="btnLogout" title="יציאה">×</button>
   </div>
+  <!-- ההסבר לכרטיסים המקווקוים. בלי כפתור סגירה: זו אינה הודעה
+       שצריך לאשר אלא מצב, והיא נעלמת מעצמה כשהתור מתנקה. -->
+  <p class="pend-bar" id="pendBar" hidden></p>
   <div class="more" id="moreMenu" hidden>
     <button class="chip" id="btnSearch">חיפוש</button>
     <button class="chip" id="btnBday">ימי הולדת</button>
@@ -1290,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 17:17</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 20:55</p>
   </div>
 </header>
 
@@ -1687,6 +1725,9 @@ const dbPersonRow = p => {
   DB_FIELDS.forEach(k => row[k] = p[k] || null);
   row.photo_path = p.photoPath || null;
   row.thumb_path = p.thumbPath || null;
+  /* מאיזו בקשה האדם נוצר. נכתב פעם אחת באישור, ומשם ואילך הוא
+     מה שמאפשר למי ששלח לזהות שהאדם שהופיע הוא בדיוק שלו. */
+  row.origin_req = p.origin || null;
   return row;
 };
 const sameRow = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -1699,6 +1740,12 @@ function planSync(cur, saved){
                 photos:[], root:null};
   if(!saved) return plan;
 
+  /* אורח אינו כותב אנשים, זוגיות או פתקים — אין לו הרשאה במסד,
+     ואין לו מסלול שעושה זאת. הדילוג כאן אינו ייעול אלא תנאי:
+     האנשים הממתינים שהוא בנה יושבים ב-DB.people כדי שמנוע
+     הפריסה יצייר אותם ככל אדם אחר, ובלי הדילוג ההשוואה הייתה
+     מנסה לכתוב אותם לטבלת האנשים ולחטוף סירוב בכל סבב. */
+  if(isAdmin()){
   const pNow = parentMap(cur), pWas = parentMap(saved);
 
   Object.keys(cur.people).forEach(id => {
@@ -1741,8 +1788,17 @@ function planSync(cur, saved){
   });
   /* פתקים של מי שנמחק נמחקים יחד איתו במסד, ולכן לא נספרים כאן */
 
-  /* בקשות ממתינות. התור הוא מערך גלובלי ולא חלק מהעץ,
-     ולכן הוא נשווה כאן בנפרד. */
+  /* תמונה שממתינה להעלאה אינה שדה רגיל ולכן לא תיתפס בהשוואת
+     השורות. בלעדיה הסנכרון בכלל לא היה רץ. */
+  plan.photos = Object.keys(cur.people)
+    .filter(id => cur.people[id].pendingPhoto || cur.people[id].dropPhoto);
+
+  if(cur.root !== saved.root) plan.root = cur.root;
+  }
+
+  /* בקשות ממתינות — אלה כן נשלחות גם בידי אורח, וזו כל הדרך
+     שבה תוספת שלו מגיעה לשרת. התור הוא מערך גלובלי ולא חלק
+     מהעץ, ולכן הוא נשווה כאן בנפרד. */
   const rWas = {}; (saved.pending || []).forEach(r => rWas[r.id] = r);
   const rNow = {}; pending.forEach(r => rNow[r.id] = r);
   pending.forEach(r => {
@@ -1752,12 +1808,6 @@ function planSync(cur, saved){
   });
   (saved.pending || []).forEach(r => { if(!rNow[r.id]) plan.delR.push(r.id); });
 
-  /* תמונה שממתינה להעלאה אינה שדה רגיל ולכן לא תיתפס בהשוואת
-     השורות. בלעדיה הסנכרון בכלל לא היה רץ. */
-  plan.photos = Object.keys(cur.people)
-    .filter(id => cur.people[id].pendingPhoto || cur.people[id].dropPhoto);
-
-  if(cur.root !== saved.root) plan.root = cur.root;
   return plan;
 }
 
@@ -2014,11 +2064,18 @@ const ADD_KINDS = ['child','spouse','sibling','parent'];
 
 function reqToRow(r){
   const isAdd = ADD_KINDS.includes(r.kind);
+  /* בקשה שנתלית על בקשה אחרת — ילד של מישהו שעדיין לא אושר.
+     המסד דורש בדיוק אחד מהשניים, ולכן העוגן האמיתי יורד לכאן
+     ל-null. מקומית r.anchor עדיין מצביע לאדם הממתין, וזה מה
+     שמצייר את הקשר על המסך. */
+  const viaReq = isAdd && !!r.parentReq;
   return {
     id: r.id,
     kind: isAdd ? 'add' : r.kind,
     relation: isAdd ? r.kind : null,
-    anchor_id: isAdd ? (r.anchor || null) : null,
+    anchor_id: (isAdd && !viaReq) ? (r.anchor || null) : null,
+    parent_req_id: viaReq ? r.parentReq : null,
+    group_id: r.group || null,
     target_id: isAdd ? null : (r.target || null),
     payload: r.kind === 'note' ? {text: r.text || ''} : (r.data || {}),
     submitted_by: r.by || null
@@ -2075,7 +2132,9 @@ function rowToReq(row){
   const pay = cleanPayload(row.payload);
   if(row.kind === 'add')
     return Object.assign(base, {kind: row.relation || 'child',
-                                anchor: row.anchor_id, data: pay});
+                                anchor: row.anchor_id, data: pay,
+                                parentReq: row.parent_req_id || null,
+                                group: row.group_id || null});
   if(row.kind === 'note')
     return Object.assign(base, {kind: 'note', target: row.target_id,
                                 text: String((row.payload || {}).text || '').slice(0, 4000)});
@@ -2111,6 +2170,9 @@ async function loadTree(){
     if(r.placeholder) p.placeholder = true;
     if(r.photo_path)  p.photoPath = r.photo_path;
     if(r.thumb_path)  p.thumbPath = r.thumb_path;
+    /* מאיזו בקשה האדם נוצר. זה מה שמאפשר לאורח לדעת שהאדם
+       שהופיע בעץ הוא בדיוק זה ששלח, בלי לנחש לפי שם. */
+    if(r.origin_req)  p.origin = r.origin_req;
     p.ver = r.updated_at;                       // החותמת, לבדיקת גרסה בכתיבה
     P[r.id] = p;
   });
@@ -2220,7 +2282,13 @@ let FLOAT_IDS = new Set();    // כל האנשים שאינם מחוברים ל�
 
 /* מי שמשתמש רגיל רשאי לראות: כולם חוץ ממרחפים */
 const visibleToUser = id => isAdmin() || !FLOAT_IDS.has(id);
-const visiblePeople = () => Object.values(DB.people).filter(p => visibleToUser(p.id));   // מפתחות הכרטיסים שאינם מחוברים לעץ
+/* רשימת המשפחה. **זה המקום היחיד שבו הכלל "ממתין אינו מופיע
+   בשום רשימה" נאכף**, ובכוונה: כל מה שמונה אנשים, מחפש אנשים או
+   מציג רשימה שלהם עובר דרך כאן — ימי הולדת, החיפוש, בוחר האדם,
+   המונה שבכותרת וספירת הקרובים. אכיפה בכל מקום בנפרד הייתה
+   מבטיחה שאחד מהם יישכח ברגע שיתווסף מסך חדש. */
+const visiblePeople = () => Object.values(DB.people)
+  .filter(p => !isPending(p) && visibleToUser(p.id));
 let BLOOD = new Set();      // מי מקבל מקום קבוע לפי קו הדם
 const hostOf = {};          // אצל איזה בן זוג מוצגים הילדים של זוגיות משותפת
 
@@ -2592,9 +2660,12 @@ function drawLinks(){
 function buildNode(key){
   const p = DB.people[KEY[key]];
   if(!p) return;
-  const isGhost = key !== p.id;
+  /* isMirror ולא isPending: המילה ghost תפוסה כאן למשמעות אחת
+     בלבד — אדם שמצויר פעמיים בעץ. האנשים הממתינים לאישור הם
+     מושג אחר לגמרי, והם נקראים pending. */
+  const isMirror = key !== p.id;
   const el = document.createElement('div');
-  el.className = 'node' + (isGhost ? ' ghost' : '');
+  el.className = 'node' + (isMirror ? ' ghost' : '') + (isPending(p) ? ' pending' : '');
   el.dataset.id = p.id;
   el.dataset.key = key;
   el.dataset.gender = p.gender;
@@ -2604,7 +2675,7 @@ function buildNode(key){
   el.style.left = RX(pos[key].x) + 'px';
   el.style.top  = pos[key].y + 'px';
   el.innerHTML =
-    (isGhost ? '<span class="mirror" title="מופיע/ה גם במקום אחר בעץ">⧉</span>' : '') +
+    (isMirror ? '<span class="mirror" title="מופיע/ה גם במקום אחר בעץ">⧉</span>' : '') +
     (FLOATING.has(key) ? '<span class="floatmark" title="לא מחובר/ת לעץ">!</span>' : '') +
     '<div class="face">' + avatarInner(p) + '</div>' +
     '<div class="sexline"></div>' +
@@ -2658,6 +2729,7 @@ function render(){
      כשאין הפרש, ולכן אפשר לקרוא לה כאן בלי לחשוש. */
   if(typeof scheduleSync === 'function') scheduleSync();
   if(typeof syncEmptyState === 'function') syncEmptyState();
+  if(typeof syncPendBar === 'function') syncPendBar();
   cancelPress();      // ביטול לחיצה ארוכה שרצה על כרטיס שעומד להימחק
   closeRing();
   svg.innerHTML = '';
@@ -3078,8 +3150,13 @@ function kinStats(id){
   second.delete(id);
   drop(second, sibs); drop(second, cousins);
 
-  return {children:children.size, grand:grand.size, sibs:sibs.size,
-          nephews:nephews.size, cousins:cousins.size, second:second.size};
+  /* ממתינים אינם נספרים. הספירה הזאת הולכת על הזוגיות ישירות
+     ולא דרך visiblePeople, ולכן היא המקום היחיד שבו הכלל צריך
+     להיאכף בשנית — בלעדיו כרטיס של אדם אמיתי היה מציג "3 ילדים"
+     למי שהוסיף אחד, מספר שרק הוא רואה ושאינו נכון. */
+  const real = s => { s.forEach(x => { if(isPending(DB.people[x])) s.delete(x); }); return s.size; };
+  return {children:real(children), grand:real(grand), sibs:real(sibs),
+          nephews:real(nephews), cousins:real(cousins), second:real(second)};
 }
 
 /* שורת הסטטיסטיקה. מספר אפס לא מוצג, וכשאין כלום — אין גם חץ. */
@@ -3371,20 +3448,23 @@ function openSheetForce(id, origin){
     ${p.placeholder ? `<p class="note" style="border-inline-start-color:var(--wood)">
       הרשומה הזו נוצרה אוטומטית כשאדם נמחק, כדי לשמור על הענף שמתחתיו.
       אפשר למלא בה פרטים במצב עריכה והיא תחזור להיות רשומה רגילה.</p>` : ''}
+    ${isPending(p) ? `<p class="note" style="border-inline-start-color:var(--wood-soft)">
+      ${esc(p.name)} ממתין לאישור המנהל ועדיין אינו חלק מהעץ.
+      אפשר להמשיך להוסיף עליו — לחיצה ארוכה על הכרטיס.</p>` : ''}
     ${statsRowHTML(id)}
-    <section class="notes-sec">
+    ${isPending(p) ? '' : `<section class="notes-sec">
       ${notes.length ? '<h3 class="sec-h">פתקים וסיפורים</h3>' + notebookHTML(notes) : ''}
       <div class="nb-add">
         <button class="btn-pill" id="addNote">הוספת פתק</button>
         <p>זיכרון, כינוי, או משהו קטן — גם משפט אחד מספיק</p>
       </div>
-    </section>
+    </section>`}
     ${(p.phone || p.email) ? `<div class="contact-end">
       <h3>פרטי תקשורת</h3>
       ${p.phone ? `<div class="ce"><b>טלפון</b><a href="tel:${esc(encodeURIComponent(p.phone))}">${esc(p.phone)}</a></div>` : ''}
       ${p.email ? `<div class="ce"><b>אימייל</b><a href="mailto:${esc(encodeURIComponent(p.email))}">${esc(p.email)}</a></div>` : ''}
     </div>` : ''}
-    ${isAdmin() ? '' : `<p class="note">זו תצוגה בלבד. אפשר לשלוח בקשת עריכה או להוסיף פתק,
+    ${(isAdmin() || isPending(p)) ? '' : `<p class="note">זו תצוגה בלבד. אפשר לשלוח בקשת עריכה או להוסיף פתק,
       והמנהל יאשר.</p>`}`;
 
   sheetBody.classList.remove('confirming');
@@ -3749,9 +3829,21 @@ function openForm(anchorId, kind){
       if(bad) toast(softText(bad));        // אזהרה בלבד — הבקשה נשלחת
 
       if(!isAdmin()){
+        /* עוגן שהוא אדם ממתין נשלח כהצבעה ל**בקשה** ולא לאדם —
+           האדם הזה עוד לא קיים בשרת, ואין למה להצביע. מקומית
+           req.anchor ממשיך להצביע אליו, וזה מה שמצייר את הקשר. */
+        const anchorP = DB.people[req.anchor];
+        if(isPending(anchorP)) req.parentReq = anchorP.pend;
+        req.group = groupFor(req.anchor);
         pending.push(req);
+        /* האדם נשאר על המסך כדי שאפשר יהיה להמשיך לבנות עליו
+           בלי להמתין לאישור. זה כל העניין. */
+        addPend(req, req.data);
         draft = null; refreshReqChip(); closePanel();
-        toast('הבקשה נשלחה לאישור');
+        layout(); render(); syncPendBar();
+        toast('נשלח לאישור');
+        const last = PENDS[PENDS.length - 1];
+        if(last && DB.people[last.pid]){ revealTo(last.pid); focusOn(last.pid); }
         return;
       }
 
@@ -3794,10 +3886,16 @@ const newRid = () => SUPA.enabled ? newUuid() : 'r' + (++reqSeq);
 /* המספר תואם למספר השורות ברשימה: בקשות עריכה על אותו אדם
    מאוחדות לשורה אחת ולכן נספרות פעם אחת. */
 function pendingRowCount(){
-  const targets = new Set();
+  const targets = new Set(), groups = new Set();
   let n = 0;
   pending.forEach(r => {
     if(r.kind === 'edit'){ if(!targets.has(r.target)){ targets.add(r.target); n++; } }
+    /* ענף נספר כשורה אחת, בדיוק כפי שהוא מוצג. מונה שאינו תואם
+       את הרשימה שמתחתיו גרוע ממונה שאינו קיים. */
+    else if(ADD_KINDS.includes(r.kind)){
+      const k = groupKey(r);
+      if(!groups.has(k)){ groups.add(k); n++; }
+    }
     else n++;
   });
   return n;
@@ -3826,6 +3924,7 @@ function refreshReqChip(){
 
 function openRequests(){
   if(!isAdmin()) return;
+  const groups = addGroups();
   const html = pending.length
     ? pending.map(r => {
         if(r.kind === 'note'){
@@ -3854,14 +3953,23 @@ function openRequests(){
             '<span class="cnt edit">בקשת עריכה<b>' + plural(n, 'שינוי אחד', 'שינויים') +
               (grp.length > 1 ? ' · ' + plural(grp.length, 'בקשה אחת', 'בקשות') : '') + '</b></span></button>';
         }
-        const a = DB.people[r.anchor];
+        /* ענף שנשלח ברצף הוא שורה אחת: זו פעולה אחת מבחינת מי
+           ששלח, ולכן גם החלטה אחת. שש שורות נפרדות היו מכריחות
+           את המנהל להרכיב את הצורה בראש. */
+        const grp = groups.get(groupKey(r)) || [r];
+        if(grp[0] !== r) return '';
+        const a = DB.people[grp[0].anchor];
+        const many = grp.length > 1;
         return '<button class="prow" data-req="' + r.id + '">' +
           dotHTML(r.data.thumb || r.data.photo, r.data.name.charAt(0),
                   r.data.gender === 'male' ? 'var(--male)' : 'var(--female)') +
-          '<span class="who"><b>' + esc(r.data.name + ' ' + r.data.surname) + '</b>' +
-          '<span>' + REL[r.kind] + ' של ' + esc(fullName(a)) + '</span>' +
+          '<span class="who"><b>' + esc(r.data.name + ' ' + r.data.surname) +
+            (many ? ' ועוד ' + (grp.length - 1) : '') + '</b>' +
+          '<span>' + (many ? 'ענף על ' : REL[r.kind] + ' של ') + esc(fullName(a)) + '</span>' +
           reqMeta(r) + '</span>' +
-          '<span class="cnt new">בן משפחה חדש</span></button>';
+          '<span class="cnt new">' +
+            (many ? plural(grp.length, 'אדם אחד', 'אנשים') : 'בן משפחה חדש') +
+          '</span></button>';
       }).join('')
     : '<p class="empty">אין בקשות ממתינות</p>';
 
@@ -3873,6 +3981,155 @@ function openRequests(){
   });
 }
 
+/* ---------- ענף שנשלח ברצף ----------
+   אורח שבנה אדם, ועליו בן זוג, ועליהם ילד — שלח שלוש בקשות
+   שנושאות מזהה קבוצה אחד. התור מציג אותן כפריט אחד, כי זו
+   פעולה אחת מבחינתו ולכן גם החלטה אחת מבחינת המנהל. */
+const groupKey = r => r.group || r.id;
+
+/* סדר תלות: הורה תמיד לפני מי שנתלה עליו. סדר השליחה כבר נכון
+   כמעט תמיד, אבל הסתמכות עליו הייתה אומרת שאישור נשבר ברגע
+   שמיון כלשהו ישתנה. */
+function orderChain(list){
+  const byId = new Map(list.map(r => [r.id, r]));
+  const out = [], done = new Set(), path = new Set();
+  const visit = r => {
+    if(!r || done.has(r.id) || path.has(r.id)) return;   // path חוסם מעגל
+    path.add(r.id);
+    if(r.parentReq && byId.has(r.parentReq)) visit(byId.get(r.parentReq));
+    path.delete(r.id);
+    if(done.has(r.id)) return;
+    done.add(r.id); out.push(r);
+  };
+  list.forEach(visit);
+  return out;
+}
+
+function addGroups(){
+  const by = new Map();
+  pending.forEach(r => {
+    if(!ADD_KINDS.includes(r.kind)) return;
+    const k = groupKey(r);
+    if(!by.has(k)) by.set(k, []);
+    by.get(k).push(r);
+  });
+  by.forEach((v, k) => by.set(k, orderChain(v)));
+  return by;
+}
+
+/* מסך בדיקת ענף. בלי עריכת שדות בתוכו במכוון: עריכה של שישה
+   אנשים במסך אחד היא טופס ענק, ואחרי האישור אפשר לערוך כל אחד
+   מהם בעץ כרגיל. */
+function openBranchReview(key){
+  if(!isAdmin()) return;
+  const list = addGroups().get(key) || [];
+  if(list.length < 2) return list[0] ? openRequest(list[0].id) : openRequests();
+  const first = list[0];
+  const root = DB.people[first.anchor];
+  if(!root){ toast('האדם שאליו קושר הענף נמחק'); return openRequests(); }
+
+  /* מי תלוי במי, לצורך הורדת סימון מדורגת */
+  const kidsOf = {};
+  list.forEach(r => { if(r.parentReq) (kidsOf[r.parentReq] = kidsOf[r.parentReq] || []).push(r.id); });
+  const nameOfReq = id => {
+    const x = list.find(y => y.id === id);
+    return x ? ((x.data.name || '') + ' ' + (x.data.surname || '')).trim() : '';
+  };
+
+  const rows = list.map(r => {
+    const under = r.parentReq ? nameOfReq(r.parentReq) : fullName(root);
+    return '<label class="br-row" data-rq="' + r.id + '">' +
+      '<input type="checkbox" checked>' +
+      dotHTML(r.data.thumb || r.data.photo, (r.data.name || '?').charAt(0),
+              r.data.gender === 'male' ? 'var(--male)' : 'var(--female)') +
+      '<span class="who"><b>' + esc((r.data.name || '') + ' ' + (r.data.surname || '')) + '</b>' +
+      '<span>' + REL[r.kind] + ' של ' + esc(under) + '</span></span></label>';
+  }).join('');
+
+  openPanel('ענף חדש', `
+    <div class="form-head">
+      <b>${plural(list.length, 'אדם אחד', 'אנשים')} על הענף של ${esc(fullName(root))}</b>
+      <span>${first.by ? 'נשלח על ידי ' + esc(first.by) : 'לא צוין מי שלח'}</span>
+    </div>
+    <div class="br-list">${rows}</div>
+    <p class="imp-note">מה שלא יסומן יישאר בתור וממתין. אי אפשר להוסיף
+      ילד בלי ההורה שעליו הוא תלוי, ולכן הורדת סימון מורידה גם את מי
+      שמתחתיו. לעריכת פרטים — אשרו, ואז ערכו בעץ כרגיל.</p>
+    <div id="rErr"></div>
+    <div id="rActions" class="form-actions">
+      <button class="btn btn-primary" id="brOk">אישור והוספה לעץ</button>
+      <button class="btn btn-ghost" id="brNo" style="color:var(--clay);border-color:#E0BDB6">דחיית הענף</button>
+    </div>`,
+  () => {
+    const g = id => panelBody.querySelector('#' + id);
+    const boxOf = id => panelBody.querySelector('[data-rq="' + id + '"] input');
+    /* הורדת סימון יורדת במורד השרשרת. סימון חוזר אינו מעלה אותם
+       בחזרה אוטומטית — החלטה מכוונת: ההורדה היא הגנה, ההעלאה
+       היא בחירה. */
+    const cascade = id => (kidsOf[id] || []).forEach(k => {
+      const b = boxOf(k);
+      if(b && b.checked){ b.checked = false; cascade(k); }
+    });
+    panelBody.querySelectorAll('.br-row input').forEach(b => {
+      b.onchange = () => { if(!b.checked) cascade(b.closest('[data-rq]').dataset.rq); };
+    });
+
+    const confirmStep = (text, cls, run) => {
+      panelBody.classList.add('confirming');
+      g('rActions').innerHTML =
+        '<div style="width:100%"><p class="err" style="color:var(--ink)">' + text + '</p>' +
+        '<div class="form-actions">' +
+        '<button class="btn ' + cls + '" id="brYes">כן</button>' +
+        '<button class="btn btn-ghost" id="brNope">לא</button></div></div>';
+      g('brYes').onclick = () => { panelBody.classList.remove('confirming'); run(); };
+      g('brNope').onclick = () => { panelBody.classList.remove('confirming'); openBranchReview(key); };
+    };
+
+    g('brOk').onclick = () => {
+      const take = list.filter(r => { const b = boxOf(r.id); return b && b.checked; });
+      if(!take.length){ g('rErr').innerHTML = '<p class="err">לא סומן אף אחד</p>'; return; }
+      confirmStep('להוסיף ' + plural(take.length, 'אדם אחד', 'אנשים') + ' לעץ?',
+                  'btn-primary', () => {
+        const err = applyChain(take);
+        refreshReqChip(); layout(); render();
+        if(err){ toast(err); return openRequests(); }
+        toast(plural(take.length, 'אדם אחד נוסף', 'אנשים נוספו') + ' לעץ');
+        openRequests();
+      });
+    };
+
+    g('brNo').onclick = () => confirmStep(
+      'למחוק את כל הענף מהתור לצמיתות?', 'btn-primary', () => {
+        list.forEach(r => {
+          const i = pending.findIndex(x => x.id === r.id);
+          if(i >= 0) pending.splice(i, 1);
+        });
+        refreshReqChip(); toast('הענף נדחה');
+        openRequests();
+      });
+  },
+  openRequests);
+}
+
+/* מוסיף שרשרת לעץ לפי הסדר, ומפנה את הילדים לאדם שנוצר **לפני**
+   שהבקשה שלו יורדת מהתור. הסדר הזה אינו קוסמטי: במסד יש מחיקה
+   מדורגת מבקשה לבקשה, ומחיקת ההורה לפני ההפניה הייתה מוחקת גם
+   את הילדים שממתינים עליו. */
+function applyChain(list){
+  for(const r of list){
+    const before = new Set(Object.keys(DB.people));
+    const err = applyRequest(r);
+    if(err) return err + ((r.data && r.data.name) ? ' — ' + r.data.name : '');
+    const nid = Object.keys(DB.people).find(k => !before.has(k));
+    if(nid) pending.forEach(x => {
+      if(x.parentReq === r.id){ x.parentReq = null; x.anchor = nid; }
+    });
+    const i = pending.findIndex(x => x.id === r.id);
+    if(i >= 0) pending.splice(i, 1);
+  }
+  return null;
+}
+
 /* מסך בדיקת בקשה — כל הפרטים פתוחים לעריכה, ואישור או דחייה בשני שלבים */
 function openRequest(rid){
   if(!isAdmin()) return;
@@ -3880,6 +4137,9 @@ function openRequest(rid){
   if(!r) return openRequests();
   if(r.kind === 'note') return openNoteReview(rid);
   if(r.kind === 'edit') return openEditReview(r.target);
+  /* בקשה שהיא חלק מענף נבדקת כענף. בקשה בודדת — שהיא הרוב —
+     ממשיכה למסך המוכר, עם עריכת כל השדות. */
+  if((addGroups().get(groupKey(r)) || []).length > 1) return openBranchReview(groupKey(r));
   const a = DB.people[r.anchor];
   if(!a){ toast('האדם שאליו קושרה הבקשה נמחק'); return openRequests(); }
   const today = new Date().toISOString().slice(0,10);
@@ -3989,7 +4249,11 @@ function validateRequest(req){
   }
   /* שתי בקשות הוספה זהות שנשלחו בנפרד — למשל שני בני משפחה
      שהוסיפו את אותו אדם. אחרת יאושרו שניהם וייווצר כפל. */
-  const twin = pending.find(x => x !== req && x.kind === req.kind &&
+  /* ההשוואה לפי מזהה ולא לפי זהות האובייקט. פעם אחת זה נכתב
+     כ-`x !== req`, ואז בקשה שכבר נכנסה לתור ונבדקה שוב דרך
+     עותק שלה — בדיוק מה שקורה כשנוצר האדם הממתין — מצאה את
+     עצמה ברשימה והכריזה על עצמה ככפילות. */
+  const twin = pending.find(x => x.id !== req.id && x.kind === req.kind &&
     x.anchor === req.anchor && x.data.name === d.name && x.data.surname === d.surname);
   if(twin) return 'יש כבר בקשה ממתינה זהה לאותו קרוב משפחה. אשרו או דחו אותה קודם';
 
@@ -4029,11 +4293,17 @@ const newUid = () => SUPA.enabled ? newUuid()
   : (() => { let n = 1; while(DB.unions.some(u => u.id === 'xu' + n)) n++; return 'xu' + n; })();
 
 /* מוסיף אדם מאושר לעץ. מחזיר הודעת שגיאה, או null בהצלחה. */
-function applyRequest(req){
+/* opts.id    — מזהה קבוע במקום חדש, לשחזור ממתינים אחרי רענון
+   opts.pend — מזהה הבקשה; מסמן שהאדם מקומי בלבד וטרם אושר.
+   שני המסלולים חולקים את אותה פונקציה בכוונה: הקישור להורה,
+   לבן זוג או לאח הוא בדיוק אותו קישור, ושכפול שלו היה מבטיח
+   ששני העצים — זה שהאורח רואה וזה שייווצר באישור — יתפצלו. */
+function applyRequest(req, opts){
   const bad = validateRequest(req);
   /* אזהרה רכה כבר הוצגה למי שאישר — כאן רק חסימות אמיתיות */
   if(bad && !isSoft(bad)) return bad;
-  const a = req.anchor, d = req.data, id = newPid();
+  const pend = opts && opts.pend;
+  const a = req.anchor, d = req.data, id = (opts && opts.id) || newPid();
   /* כל השדות, מאותה רשימה אחת שמשרתת גם את השער וגם את הטופס.
      קודם הם נכתבו כאן ביד — ו-death, phone ו-email לא היו ברשימה.
      בן משפחה מילא טלפון ותאריך פטירה, המנהל אישר, והשלושה נעלמו
@@ -4042,17 +4312,37 @@ function applyRequest(req){
   reqKeys().forEach(k => { if(d[k] && !(k in p)) p[k] = d[k]; });
   /* גרסה זעירה בלי מקור אין לה טעם */
   if(!p.photo) delete p.thumb;
-  markPhotoForUpload(p, d);
+  if(pend){
+    /* אדם ממתין אינו נכתב לשום מקום: התמונה שלו כבר נוסעת בתוך
+       הבקשה, וסימון להעלאה היה מנסה להעלות אותה שוב — מאורח
+       שאין לו בכלל הרשאה להעלות. הקטנה נשארת, כי היא מה
+       שמצויר בכרטיס שבעץ. */
+    p.pend = pend;
+    if(req.group) p.pendGroup = req.group;
+    delete p.photo;
+  } else {
+    /* מאיזו בקשה נוצר. בלי זה מי ששלח אותה אינו יכול לדעת
+       שהאדם שהופיע בעץ הוא בדיוק שלו, והצל שלו לא היה יורד. */
+    if(req.id) p.origin = req.id;
+    markPhotoForUpload(p, d);
+  }
 
   if(req.kind === 'child'){
     let u = unionsOf(a)[0];
-    if(!u){ u = {id:newUid(), partners:[a], children:[], status:'married'}; DB.unions.push(u); }
+    /* רק זוגיות שנוצרת כאן מסומנת כממתינה. זוגיות קיימת שמקבלת
+       ילד ממתין נשארת אמיתית — היא כבר בשרת. */
+    if(!u){
+      u = {id:newUid(), partners:[a], children:[], status:'married'};
+      if(pend) u.pend = pend;
+      DB.unions.push(u);
+    }
     DB.people[id] = p; u.children.push(id); expanded.add(u.id);
   }
   else if(req.kind === 'spouse'){
     if(unionsOf(a).length >= 2) return 'לאדם הזה כבר רשומות שתי מערכות';
     DB.people[id] = p;
     const u = {id:newUid(), partners:[a, id], children:[], status:'married'};
+    if(pend) u.pend = pend;
     DB.unions.push(u); expanded.add(u.id);
   }
   else if(req.kind === 'sibling'){
@@ -4067,7 +4357,12 @@ function applyRequest(req){
     if(u){ u.partners.push(id); expanded.add(u.id); }
     else {
       const nu = {id:newUid(), partners:[id], children:[a], status:'married'};
+      if(pend) nu.pend = pend;
       DB.unions.push(nu); expanded.add(nu.id);
+      /* השורש זז גם כשההורה ממתין, אחרת הוא פשוט לא יצויר:
+         הפריסה יורדת מהשורש כלפי מטה. אצל אורח השורש הוא מצב
+         מקומי בלבד — הוא אינו נשלח — והשחזור מחיל את ההזזה
+         מחדש אחרי כל טעינה. */
       if(DB.root === a) DB.root = id;
     }
   }
@@ -4397,6 +4692,14 @@ async function adoptServerTree(fresh){
   pending.length = 0;
   (DB.requests || []).forEach(r => pending.push(r));
   refreshReqChip();
+  /* הממתינים של האורח נבנים מחדש על גבי העץ הטרי, כי DB הוחלף
+     כולו. קודם מבררים מה קרה להם — מי אושר, מי נדחה — ורק אז
+     מציירים את מי שנשאר.
+     לפני markSaved במכוון: כך הם נכנסים גם לקו הבסיס, וההשוואה
+     לא תראה אותם כאנשים חדשים שצריך לכתוב לשרת. */
+  loadPends();
+  await resolvePends();
+  rebuildPends();
   markSaved(DB, DB.serverRoot);  // מרגע זה כל הפרש ייחשב כשינוי שלנו
   remoteWaiting = false;
   hideRemoteNotice();
@@ -4419,6 +4722,10 @@ function finishLogin(){
   document.getElementById('loginErr').innerHTML = '';
   loginBox.classList.add('hide');
   applyRole();
+  /* בגרסה המחוברת הממתינים כבר נבנו ב-adoptServerTree, על גבי
+     העץ שהגיע מהשרת. במצב מקומי אין שלב כזה, ובלי השורה הזאת
+     הם היו נעלמים בכל רענון — ואז התנהגות הדמה שונה מהאמת. */
+  if(!SUPA.enabled){ loadPends(); rebuildPends(); }
   refreshReqChip();
   layout(); render();          // המרחפים מופיעים או נעלמים לפי ההרשאה
   center(false);
@@ -6744,14 +7051,164 @@ if(SUPA.enabled) setInterval(pollServer, 10000);
 /* והתיישרות מלאה אחת לחמש דקות, בשקט */
 if(SUPA.enabled) setInterval(reconcile, 300000);
 
-/* אם יש אסימון מהפעם הקודמת — נכנסים בלי לשאול סיסמה */
-if(SUPA.enabled) resumeSession();
-
 addEventListener('resize', () => apply());
 
 
 /* ============================================================
-   20. התקנה בטלפון, ודפדפן פנימי
+   20. אנשים ממתינים — מה שאורח הוסיף וטרם אושר
+   ============================================================
+   כלל אחד, בלי יוצאים מן הכלל:
+   **רואים אותם בעץ ואפשר לבנות עליהם. וזהו.**
+   הם אינם מופיעים בשום רשימה של המשפחה ואינם משנים אף מספר
+   שמוצג על אדם אמיתי. כלל בלי חריגים אפשר לזכור; רשימת
+   החלטות נפרדת לכל מסך — לא.
+
+   הם יושבים בתוך DB.people כדי שמנוע הפריסה, הטבעת והכרטיס
+   יעבדו עליהם בלי שינוי, ומסומנים ב-p.pend שהוא מזהה הבקשה
+   ששלחה אותם. planSync מדלג על אנשים אצל אורח, ולכן הם לעולם
+   לא ינסו להיכתב לטבלת האנשים. */
+
+const PEND_KEY = 'bachur.pending.v1';
+const isPending = p => !!(p && p.pend);
+const pendList = () => Object.values(DB.people).filter(isPending);
+
+/* מה שנשמר בטלפון. לא האדם המצויר אלא המתכון לבנות אותו מחדש:
+   הקישור נבנה בשחזור באותה פונקציה שבנתה אותו בפעם הראשונה.
+
+   התמונה המלאה **אינה** נשמרת כאן. היא כבר נשלחה בתוך הבקשה,
+   ועותק שני שלה בטלפון היה אוכל מהאחסון המקומי בלי שום תועלת:
+   מלאה היא עד 225 ק״ב כטקסט, והקטנה — שהיא מה שמצויר בכרטיס
+   שבעץ — 40. */
+let PENDS = [];
+
+function savePends(){
+  try{
+    localStorage.setItem(PEND_KEY, JSON.stringify({fam: FAMILY_ID || '', list: PENDS}));
+  }catch(e){}            // אחסון מלא או חסום — הציור בזיכרון ממשיך
+}
+function loadPends(){
+  PENDS = [];
+  try{
+    const raw = JSON.parse(localStorage.getItem(PEND_KEY) || 'null');
+    /* שמור לפי משפחה: מי שנכנס למשפחה אחרת לא יראה ממתינים
+       של הקודמת תלויים על אנשים שאינם קיימים אצלה. */
+    if(raw && raw.fam === (FAMILY_ID || '') && Array.isArray(raw.list)) PENDS = raw.list;
+  }catch(e){}
+  return PENDS;
+}
+function clearPends(){
+  PENDS = [];
+  try{ localStorage.removeItem(PEND_KEY); }catch(e){}
+}
+
+/* בונה מחדש את כל הממתינים על גבי העץ שנטען מהשרת.
+   נקרא אחרי כל טעינה ואחרי כל התיישרות, כי שתיהן דורסות את
+   DB במלואו. הסדר שבמערך הוא סדר התלות — ילד תמיד אחרי ההורה
+   שעליו נתלה — ולכן די במעבר אחד. */
+function rebuildPends(){
+  /* למנהל אין ממתינים — הוא מוסיף ישירות לעץ. אם נכנסו באותו
+     דפדפן קודם כאורח, הממתינים השמורים אינם שלו ואסור שיצוירו
+     אצלו: הוא היה רואה בעץ שלו אנשים שאינם בשרת. */
+  if(isAdmin() || !PENDS.length) return;
+  const keep = [];
+  PENDS.forEach(g => {
+    /* העוגן נעלם — המנהל מחק את האדם שעליו נתלה, או שההורה
+       הממתין עצמו נדחה. אין על מה לצייר, והילד יורד איתו. */
+    if(!DB.people[g.anchor]) return;
+    const req = {id: g.rid, kind: g.kind, anchor: g.anchor, group: g.group,
+                 by: g.by, at: g.at, data: g.data};
+    if(applyRequest(req, {id: g.pid, pend: g.rid})) return;   // נחסם — מדלגים
+    keep.push(g);
+  });
+  if(keep.length !== PENDS.length){ PENDS = keep; savePends(); }
+}
+
+/* מזהה הקבוצה: ענף שנבנה ברצף נושא מזהה אחד, כדי שתור המנהל
+   יציג אותו כפריט אחד ולא כשש שורות מנותקות. */
+function groupFor(anchorId){
+  const a = DB.people[anchorId];
+  return (a && a.pendGroup) || newUuid();
+}
+
+/* נקרא ברגע שאורח לחץ אישור. הבקשה כבר נכנסה ל-pending ותישלח
+   מעצמה בסבב הסנכרון הבא; כאן רק נוצר האדם שהוא רואה. */
+function addPend(req, data){
+  const anchor = DB.people[req.anchor];
+  const pid = newUuid();
+  const rec = {rid: req.id, pid, kind: req.kind, anchor: req.anchor,
+               group: req.group, by: req.by, at: req.at,
+               /* בלי התמונה המלאה, ראו למעלה */
+               data: Object.assign({}, data, {photo: ''})};
+  if(applyRequest({id: rec.rid, kind: rec.kind, anchor: rec.anchor,
+                   group: rec.group, by: rec.by, at: rec.at, data: rec.data},
+                  {id: pid, pend: rec.rid})) return false;
+  PENDS.push(rec);
+  savePends();
+  return true;
+}
+
+/* ---------- מה קרה לבקשות שנשלחו ----------
+   שלושה מצבים, ושלושתם נחתכים בוודאות ולא בניחוש:
+     עוד ממתין            → נשאר עמום
+     נולד אדם עם המזהה    → אושר, הצל יורד והאמיתי במקומו
+     לא ממתין ולא נולד    → נדחה, הצל יורד בשקט
+
+   חשוב שזה ירוץ **אחרי** משיכת האנשים ולא לפני: בסדר ההפוך,
+   בקשה שאושרה נראית כ"לא ממתינה ולא נולדה" — כלומר נדחתה —
+   והאדם היה נמחק מהמסך רגע לפני שהאמיתי הגיע. */
+async function resolvePends(){
+  if(!SUPA.enabled || isAdmin() || !PENDS.length) return false;
+  const born = {};
+  Object.values(DB.people).forEach(p => { if(p.origin) born[p.origin] = p.id; });
+
+  let alive;
+  try{
+    const r = await api('/rest/v1/rpc/pending_requests',
+                        {method:'POST', body:{p_ids: PENDS.map(g => g.rid)}});
+    const arr = Array.isArray(r) ? r : [];
+    alive = new Set(arr.map(x => (x && typeof x === 'object')
+                                 ? x.pending_requests || x.id : x).filter(Boolean));
+  }catch(e){
+    return false;        // אין רשת: לא מסיקים כלום, הכול נשאר כפי שהוא
+  }
+
+  /* ילד של ממתין שאושר צריך להיתלות מעכשיו על האדם האמיתי.
+     בלי זה העוגן שלו נעלם יחד עם הצל של ההורה, והוא היה נופל. */
+  PENDS.forEach(g => {
+    const parent = PENDS.find(x => x.pid === g.anchor);
+    if(parent && born[parent.rid]) g.anchor = born[parent.rid];
+  });
+
+  const keep = PENDS.filter(g => !born[g.rid] && alive.has(g.rid));
+  const changed = keep.length !== PENDS.length;
+  PENDS = keep;
+  savePends();
+  return changed;
+}
+
+/* הרצועה שמסבירה את הכרטיסים המקווקוים. מופיעה רק כשיש ממתינים
+   ונעלמת מעצמה כשהתור מתנקה — אין לה כפתור סגירה, כי היא הסבר
+   ולא הודעה שצריך לאשר. */
+function syncPendBar(){
+  const bar = document.getElementById('pendBar');
+  if(!bar) return;
+  const n = pendList().length;
+  bar.hidden = !n;
+  /* מרוקנים ולא רק מסתירים: טקסט ישן שנשאר מאחורי hidden הוא
+     טקסט שמישהו עוד יקרא — בבדיקה, בקורא מסך, או ברגע שמשהו
+     יציג את הרצועה בטעות. */
+  if(!n){ bar.textContent = ''; return; }
+  /* דרך plural, ככל ניסוח אחר באפליקציה: "1 בני משפחה" הוא בדיוק
+     סוג התקלה שהכלל הזה קיים כדי למנוע. */
+  bar.textContent = n === 1
+    ? 'הוספתם בן משפחה אחד. הוא ממתין לאישור ועדיין אינו חלק מהעץ.'
+    : 'הוספתם ' + plural(n, 'בן משפחה', 'בני משפחה') +
+      '. הם ממתינים לאישור ועדיין אינם חלק מהעץ.';
+}
+
+
+/* ============================================================
+   21. התקנה בטלפון, ודפדפן פנימי
    ============================================================ */
 
 /* מותקן = רץ כאפליקציה ולא בלשונית.
@@ -6877,6 +7334,11 @@ function wireIabLock(){
 
 wireIabLock();
 syncInstallUI();
+
+/* אם יש אסימון מהפעם הקודמת — נכנסים בלי לשאול סיסמה.
+   כאן ולא למעלה: הכניסה בונה מחדש את האנשים הממתינים, והמודול
+   שמחזיק אותם מוגדר רק כמה שורות מעל. */
+if(SUPA.enabled) resumeSession();
 
 /* --- הפעלה ראשונה --- */
 layout();
