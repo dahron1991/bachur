@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-7XVBTPDyJfjoxkmqt/DV4Pt+w7lrVRJecSotMG4r6SI=';
+  script-src 'sha256-hqamENNI9IcQoAWvVIs8M1Mtx/L8fOaHdr1ZHFPS1l8=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1328,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:02</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 23:28</p>
   </div>
 </header>
 
@@ -4082,8 +4082,15 @@ function openBranchReview(key){
   if(!root){ toast('האדם שאליו קושר הענף נמחק'); return openRequests(); }
 
   /* מי תלוי במי, לצורך הורדת סימון מדורגת */
-  const kidsOf = {};
-  list.forEach(r => { if(r.parentReq) (kidsOf[r.parentReq] = kidsOf[r.parentReq] || []).push(r.id); });
+  const kidsOf = {}, parentOf = {};
+  const inGroup = new Set(list.map(r => r.id));
+  list.forEach(r => {
+    /* רק תלות בתוך הקבוצה. בקשה שנתלתה על בקשה שכבר אושרה
+       הופנתה לאדם אמיתי, ואין לה כאן הורה. */
+    if(!r.parentReq || !inGroup.has(r.parentReq)) return;
+    (kidsOf[r.parentReq] = kidsOf[r.parentReq] || []).push(r.id);
+    parentOf[r.id] = r.parentReq;
+  });
   const nameOfReq = id => {
     const x = list.find(y => y.id === id);
     return x ? ((x.data.name || '') + ' ' + (x.data.surname || '')).trim() : '';
@@ -4128,15 +4135,28 @@ function openBranchReview(key){
   () => {
     const g = id => panelBody.querySelector('#' + id);
     const boxOf = id => panelBody.querySelector('[data-rq="' + id + '"] input');
-    /* הורדת סימון יורדת במורד השרשרת. סימון חוזר אינו מעלה אותם
-       בחזרה אוטומטית — החלטה מכוונת: ההורדה היא הגנה, ההעלאה
-       היא בחירה. */
-    const cascade = id => (kidsOf[id] || []).forEach(k => {
+    /* הסימון חייב להיות עקבי **בשני הכיוונים**, ולא רק כלפי מטה.
+       קודם ירידה הורידה את כל מי שמתחת — אבל אפשר היה לסמן ילד
+       בחזרה וההורה נשאר כבוי. אישור במצב כזה נכשל בהודעה
+       "האדם שאליו קושרה הבקשה כבר לא קיים בעץ", ושום דבר לא
+       קרה: מסך ללא מוצא, שנראה כמו תקלה. */
+    const down = id => (kidsOf[id] || []).forEach(k => {
       const b = boxOf(k);
-      if(b && b.checked){ b.checked = false; cascade(k); }
+      if(b && b.checked){ b.checked = false; down(k); }
     });
+    /* סימון מעלה את כל מי שהוא תלוי בו: אי אפשר לקחת את הילד
+       בלי ההורה, ולכן לקיחת הילד לוקחת גם אותו. */
+    const up = id => {
+      const par = parentOf[id];
+      if(!par) return;
+      const b = boxOf(par);
+      if(b && !b.checked){ b.checked = true; up(par); }
+    };
     panelBody.querySelectorAll('.br-row input').forEach(b => {
-      b.onchange = () => { if(!b.checked) cascade(b.closest('[data-rq]').dataset.rq); };
+      b.onchange = () => {
+        const id = b.closest('[data-rq]').dataset.rq;
+        if(b.checked) up(id); else down(id);
+      };
     });
 
     const confirmStep = (text, cls, run) => {
@@ -4153,6 +4173,15 @@ function openBranchReview(key){
     g('brOk').onclick = () => {
       const take = list.filter(r => { const b = boxOf(r.id); return b && b.checked; });
       if(!take.length){ g('rErr').innerHTML = '<p class="err">לא סומן אף אחד</p>'; return; }
+      /* רשת ביטחון מעבר לסימון האוטומטי: בחירה שחסר בה הורה אינה
+         ניתנת להוספה בכלל, ועדיף להגיד את זה מאשר להיכשל באמצע. */
+      const ids = new Set(take.map(r => r.id));
+      const orphan = take.find(r => parentOf[r.id] && !ids.has(parentOf[r.id]));
+      if(orphan){
+        g('rErr').innerHTML = '<p class="err">' +
+          esc((orphan.data.name || 'אדם') + ' תלוי במי שלא סומן. סמנו גם אותו') + '</p>';
+        return;
+      }
       confirmStep('להוסיף ' + plural(take.length, 'אדם אחד', 'אנשים') + ' לעץ?',
                   'btn-primary', () => {
         const err = applyChain(take);
@@ -4295,8 +4324,12 @@ function setDependency(req){
 
   if(req.kind === 'sibling'){
     const u = DB.unions.find(x => x.children.includes(req.anchor));
-    /* זוגיות שנוצרה יחד עם הממתין — התלות בו אמיתית */
-    if(u && !u.pend){
+    /* הזוגיות עצמה ממתינה: התלות היא **בה**, כלומר בבקשה שיצרה
+       אותה — ולא באח שדרכו הוספנו. שני אחים שנכנסים לאותה
+       זוגיות ממתינה אינם תלויים זה בזה, וכל אחד מהם יכול
+       להיכנס בלי השני. u.pend הוא בדיוק מזהה הבקשה ההיא. */
+    if(u && u.pend){ req.parentReq = u.pend; return; }
+    if(u){
       /* אח אמיתי באותה זוגיות: "אח שלו" ו"אח שלו" הם אותו דבר */
       const sib = u.children.find(c => c !== req.anchor && !isPending(DB.people[c]));
       if(sib){ req.anchor = sib; return; }
