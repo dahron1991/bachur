@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-BpllTuv9/fdv7QLx47i2TtOqehJnTAx0NSHee5AqLTY=';
+  script-src 'sha256-5nRdJDA55LxDnW1OgpV/LS3kW8Zljjk15RprD3G2avA=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1328,7 +1328,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 9.10.2026 · 20:55</p>
+    <p class="build" id="buildStamp">גרסה 9.10.2026 · 22:12</p>
   </div>
 </header>
 
@@ -1498,17 +1498,29 @@ async function api(path, {method = 'GET', body = null, headers = {}} = {}){
   } finally {
     if(bail) clearTimeout(bail);
   }
-  if(res.status === 401 || res.status === 403){
-    const e = new Error('ההרשאה פגה. יש להיכנס מחדש');
-    e.auth = true;
-    throw e;
-  }
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch(e){ data = null; }
+  const raw = (data && (data.message || data.error || data.hint)) || '';
+
+  if(res.status === 401 || res.status === 403){
+    /* 403 אינו בהכרח אסימון שפג. הוא גם מה שהמסד מחזיר כשכלל
+       הרשאות דחה את הפעולה — ואז ניתוק המשתמש הוא תגובה שגויה
+       לגמרי: הוא מחובר היטב, הפעולה פשוט אסורה לו.
+       בדיוק זה קרה לכל בקשה של אורח: המסד החזיר 42501, הלקוח
+       הכריז "ההרשאה פגה", והבקשה מעולם לא נשלחה. */
+    const dbRule = (data && data.code) === '42501' ||
+                   /row-level security|permission denied/i.test(raw);
+    if(!dbRule){
+      const e = new Error('ההרשאה פגה. יש להיכנס מחדש');
+      e.auth = true; e.status = res.status;
+      throw e;
+    }
+  }
   if(!res.ok){
-    const raw = (data && (data.message || data.error || data.hint)) || '';
-    throw new Error(serverMsg(raw, res.status));
+    const e = new Error(serverMsg(raw, res.status));
+    e.status = res.status; e.raw = raw;
+    throw e;
   }
   return data;
 }
@@ -1590,23 +1602,32 @@ let FAMILY_ID = null;              // מזהה המשפחה שבאסימון
    שהוא תואם לאסימון — ולכן אי אפשר לכתוב למשפחה אחרת. */
 const withFamily = row => Object.assign({}, row, {family_id: FAMILY_ID});
 
-async function insertRows(table, rows){
+async function insertRows(table, rows, opts){
   if(!rows.length) return [];
   /* שומר: מזהה שאינו בפורמט של המסד גורם לדחייה של כל המנה,
      עם קוד שגיאה סתום. עדיף להיעצר כאן עם הודעה מובנת. */
   const bad = rows.find(r => r.id && !isUuid(r.id));
   if(bad) throw new Error('מזהה לא תקין בטבלה ' + table + ': ' + bad.id);
+  const o = opts || {};
   const out = [];
   for(let i = 0; i < rows.length; i += 200){      // מנות, כדי לא לשלוח בקשה ענקית
     /* merge-duplicates: ניסיון חוזר אחרי כישלון באמצע לא יתנגש
        על שורה שכבר נכנסה, אלא יעדכן אותה. בלי זה כל ניסיון שני
        נכשל על מפתח כפול והסנכרון נתקע לנצח. */
-    const r = await api('/rest/v1/' + table, {
-      method: 'POST',
-      body: rows.slice(i, i + 200).map(withFamily),
-      headers: {'Prefer': 'return=representation,resolution=merge-duplicates'}
-    });
-    if(Array.isArray(r)) out.push(...r);
+    try {
+      const r = await api('/rest/v1/' + table, {
+        method: 'POST',
+        body: rows.slice(i, i + 200).map(withFamily),
+        headers: {'Prefer': o.prefer || 'return=representation,resolution=merge-duplicates'}
+      });
+      if(Array.isArray(r)) out.push(...r);
+    } catch(e){
+      /* בלי ON CONFLICT — ראו את הכתיבה של בקשות — ניסיון חוזר
+         על שורה שכבר נכנסה נופל על מפתח כפול, וזה בדיוק המצב
+         שבו אין מה לעשות כי היא כבר שם. הזיהוי לפי קוד 409 ולא
+         לפי טקסט ההודעה, שמתורגם לעברית בדרך החוצה. */
+      if(!(o.skipDup && e && e.status === 409)) throw e;
+    }
   }
   return out;
 }
@@ -1891,7 +1912,17 @@ async function runSync(plan, db){
   /* בקשות מצביעות לאנשים, ולכן הן נכנסות אחרי שהאנשים קיימים
      ונמחקות לפני שהאנשים נמחקים. */
   if(plan.addR.length)
-    await insertRows('requests', plan.addR.map(id => reqToRow(pending.find(r => r.id === id))));
+    /* בקשות נכתבות אחרת מכל טבלה אחרת, והסיבה היא הרשאות.
+       לאורח יש הרשאת **הוספה בלבד**: אין לו קריאה ואין לו עדכון.
+       מכאן ששלוש הצורות הרגילות נדחות על ידי המסד:
+         return=representation       → RETURNING, שדורש קריאה
+         resolution=merge-duplicates → ON CONFLICT DO UPDATE, עדכון
+         ON CONFLICT DO NOTHING      → גם הוא דורש קריאה
+       מה שנשאר הוא הכנסה פשוטה, בלי כלום. זו הייתה הסיבה שכל
+       בקשה של אורח — אדם, פתק או עריכה — נכשלה: המסד ענה 42501,
+       הלקוח תרגם ל"ההרשאה פגה" והחזיר אותו למסך הכניסה. */
+    await insertRows('requests', plan.addR.map(id => reqToRow(pending.find(r => r.id === id))),
+                     {prefer: 'return=minimal', skipDup: true});
   for(const id of plan.updR){
     const r = pending.find(x => x.id === id);
     if(!r) continue;
