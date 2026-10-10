@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-i2PLtvyJdmOFQux9lJvmSrWi7Kbj9uRgnwLczu6xqBE=';
+  script-src 'sha256-WqHPoO2jIrs6mBg+x6dD3S7xO6vICJh+IMNGV74znXA=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -406,13 +406,25 @@ body{
   /* אטום לגמרי, ולא שקוף למחצה. בשקיפות נראו קווי החיבור שמאחורי
      הכרטיס — הם מצוירים ב-SVG מתחת לכל הכרטיסים, ובכרטיס רגיל
      הרקע האטום מסתיר אותם. לסדר את הקווים כדי שיתאימו לשקיפות
-     היה שינוי במנוע הפריסה בשביל אפקט, והסימון המקווקו אומר את
-     אותו דבר בלי לגעת בכלום. */
-  border-style:dashed; border-width:3px; border-color:var(--clay);
+     היה שינוי במנוע הפריסה בשביל אפקט.
+
+     **מנוקד ובצבע העץ, ולא מקווקו בקלאי.** מקווקו-קלאי כבר תפוס
+     ל-[data-float] — אדם שאינו מחובר לעץ — ושני מצבים שונים
+     לגמרי במראה זהה הם בדיוק סוג התקלה שאי אפשר לראות בבדיקה
+     אוטומטית. הסרט "ממתין" שמעל התמונה הוא מה שאומר את זה
+     במילים, ולא רק בצבע. */
+  border-style:dotted; border-width:3px; border-color:var(--wood);
   box-shadow:none;
 }
 /* גובר על צבע הגבול לפי דור, שמוגדר למעלה באותה דרגת ספציפיות */
-.node.pending[data-gen]{border-color:var(--clay);}
+.node.pending[data-gen]{border-color:var(--wood);}
+.node .pendmark{
+  position:absolute; inset-inline:0; top:0; z-index:3;
+  background:var(--wood); color:var(--cream);
+  font-family:var(--font-ui); font-size:9.5px; font-weight:700;
+  letter-spacing:.04em; text-align:center; padding:2px 0;
+  pointer-events:none;
+}
 
 /* הרצועה שמסבירה אותם */
 .pend-bar{
@@ -1344,7 +1356,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 10.10.2026 · 00:16</p>
+    <p class="build" id="buildStamp">גרסה 10.10.2026 · 17:33</p>
   </div>
 </header>
 
@@ -2744,6 +2756,7 @@ function buildNode(key){
   el.innerHTML =
     (isMirror ? '<span class="mirror" title="מופיע/ה גם במקום אחר בעץ">⧉</span>' : '') +
     (FLOATING.has(key) ? '<span class="floatmark" title="לא מחובר/ת לעץ">!</span>' : '') +
+    (isPending(p) ? '<span class="pendmark">ממתין</span>' : '') +
     '<div class="face">' + avatarInner(p) + '</div>' +
     '<div class="sexline"></div>' +
     '<div class="name"><span>' + esc(p.name) + '</span></div>';
