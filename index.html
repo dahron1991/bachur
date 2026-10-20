@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-WqHPoO2jIrs6mBg+x6dD3S7xO6vICJh+IMNGV74znXA=';
+  script-src 'sha256-SwEScYQNnglit30Q0sq3xUndvaLLmhVr6RFsja8EHRw=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -882,6 +882,14 @@ mark{
   display:flex; align-items:center; justify-content:center;
   background:transparent; border:none; padding:0; margin:0;
 }
+/* מתג לועזי / עברי בשדה התאריך: קטן יותר מזה של ימי ההולדת */
+.seg.seg-date{margin-bottom:7px; padding:2px; border-radius:9px; max-width:180px;}
+.seg.seg-date button{font-size:12.5px; padding:5px 0; border-radius:7px;}
+.hdate-row{display:flex; gap:6px;}
+.field .hdate-row select{padding:12px 6px; text-align:center; text-align-last:center;}
+.hdate-row select:nth-child(1){flex:0 0 22%;}
+.hdate-row select:nth-child(2){flex:1;}
+.hdate-row select:nth-child(3){flex:0 0 40%;}
 .req{color:var(--clay);}
 .pick{display:flex; gap:8px;}
 .pick button{
@@ -1356,7 +1364,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 10.10.2026 · 17:33</p>
+    <p class="build" id="buildStamp">גרסה 20.10.2026 · 22:45</p>
   </div>
 </header>
 
@@ -5930,6 +5938,131 @@ function normDate(s){
   return dy === undefined ? y + '-' + pad2(mo)
                           : y + '-' + pad2(mo) + '-' + pad2(dy);
 }
+
+/* ---------- תאריך עברי בטופס ----------
+   ההמרה היא של הדפדפן עצמו (הלוח העברי של Intl), בלי רשת ובלי
+   ספרייה. במסד נשמר תמיד התאריך הלועזי, כמו קודם: העברי הוא רק
+   דרך נוספת להזין אותו. היום העברי מחושב לפי היום האזרחי, ולכן
+   מי שנולד אחרי השקיעה יקבל יום עברי אחד מוקדם מדי. */
+const HD_FMT = new Intl.DateTimeFormat('en-u-ca-hebrew', {day:'numeric', month:'long', year:'numeric'});
+const HD_NAMES = {Tishri:'תשרי', Heshvan:'חשוון', Kislev:'כסלו', Tevet:'טבת', Shevat:'שבט',
+  Adar:'אדר', 'Adar I':'אדר א׳', 'Adar II':'אדר ב׳', Nisan:'ניסן', Iyar:'אייר',
+  Sivan:'סיוון', Tamuz:'תמוז', Av:'אב', Elul:'אלול'};
+function hdParts(y, m, d){
+  const o = {};
+  HD_FMT.formatToParts(new Date(y, m - 1, d, 12)).forEach(p => { o[p.type] = p.value; });
+  return {d: Number(o.day), m: o.month, y: Number(o.year)};
+}
+/* מספר באותיות: 5 ← ה׳, 15 ← ט״ו, 708 ← תש״ח */
+function heNum(n){
+  const L = [[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק'],[90,'צ'],[80,'פ'],[70,'ע'],[60,'ס'],
+    [50,'נ'],[40,'מ'],[30,'ל'],[20,'כ'],[10,'י'],[9,'ט'],[8,'ח'],[7,'ז'],[6,'ו'],[5,'ה'],
+    [4,'ד'],[3,'ג'],[2,'ב'],[1,'א']];
+  let s = '';
+  while(n > 0){
+    if(n === 15){ s += 'טו'; break; }               // לא י״ה ולא י״ו
+    if(n === 16){ s += 'טז'; break; }
+    const [v, c] = L.find(([v]) => n >= v);
+    s += c; n -= v;
+  }
+  return s.length === 1 ? s + '׳' : s.slice(0, -1) + '״' + s.slice(-1);
+}
+const heYear = hy => heNum(hy % 1000);
+/* כל ימי השנה העברית, לפי חודשים, בסדר. השנה מתחילה בין 5 בספטמבר
+   ל-5 באוקטובר ואורכה עד 385 יום, ולכן סורקים מ-1 בספטמבר 420 יום. */
+const hdYearCache = {};
+function hdYear(hy){
+  if(hdYearCache[hy]) return hdYearCache[hy];
+  const months = [], gy = hy - 3761;
+  for(let i = 0; i < 420; i++){
+    const dt = new Date(gy, 8, 1 + i, 12);
+    const h = hdParts(dt.getFullYear(), dt.getMonth() + 1, dt.getDate());
+    if(h.y !== hy) continue;
+    let mo = months[months.length - 1];
+    if(!mo || mo.m !== h.m) months.push(mo = {m: h.m, days: []});
+    mo.days.push(dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate()));
+  }
+  return (hdYearCache[hy] = months);
+}
+/* מעברי ללועזי. null אם אין יום כזה בחודש הזה בשנה הזו. */
+function hdToIso(hy, m, d){
+  const mo = hdYear(hy).find(x => x.m === m);
+  return mo && mo.days[d - 1] || null;
+}
+/* ה׳ באייר תש״ח */
+function hdLabel(iso){
+  if(!isFullDate(iso)) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  const h = hdParts(y, m, d);
+  return heNum(h.d) + ' ב' + HD_NAMES[h.m] + ' ' + heYear(h.y);
+}
+const hdNow = () => { const t = new Date(); return hdParts(t.getFullYear(), t.getMonth() + 1, t.getDate()).y; };
+
+/* השורה שמתחת לשדה: כשיש תאריך מלא — מה הוא בלוח השני */
+function dateHint(v){
+  const n = normDate(v);
+  return n && isFullDate(n) ? 'בלוח העברי: ' + hdLabel(n) : 'אפשר לרשום רק שנה, למשל 1948';
+}
+
+/* מצב "עברי": שלוש רשימות במקום שדה הטקסט. אין כתיב חופשי, ולכן
+   אין "ה' אייר" מול "5 באייר" מול "ה׳ באייר". הבחירה ממירה מיד
+   ללועזי וכותבת אותו לשדה הטקסט המוסתר, שממנו הטופס קורא כרגיל. */
+function wireHebrewDate(root, k, txt, d){
+  const seg = root.querySelector('#hds_' + k), row = root.querySelector('#hdr_' + k);
+  const wrap = root.querySelector('#dw_' + k), hint = root.querySelector('#hdh_' + k);
+  const sd = root.querySelector('#hdd_' + k), sm = root.querySelector('#hdm_' + k),
+        sy = root.querySelector('#hdy_' + k);
+  if(!seg || !row) return;
+  const opt = (v, label, on) =>
+    '<option value="' + v + '"' + (on ? ' selected' : '') + '>' + label + '</option>';
+  const now = hdNow();
+  const fillMonths = (hy, keep) => {
+    /* בשנה מעוברת יש אדר א׳ ואדר ב׳. מי שבחר "אדר" ואז שנה מעוברת
+       עובר לאדר ב׳, כמו פורים. */
+    const list = hy ? hdYear(hy).map(x => x.m)
+      : ['Tishri','Heshvan','Kislev','Tevet','Shevat','Adar','Nisan','Iyar','Sivan','Tamuz','Av','Elul'];
+    if(keep === 'Adar' && !list.includes('Adar')) keep = 'Adar II';
+    if((keep === 'Adar I' || keep === 'Adar II') && !list.includes(keep)) keep = 'Adar';
+    sm.innerHTML = opt('', 'חודש', !keep) + list.map(m => opt(m, HD_NAMES[m], m === keep)).join('');
+  };
+  const show = () => {
+    const iso = sy.value && sm.value && sd.value ? hdToIso(+sy.value, sm.value, +sd.value) : null;
+    if(iso){
+      txt.value = d[k] = iso;
+      hint.textContent = 'בלוח הלועזי: ' + fmtDate(iso);
+    } else if(sy.value && sm.value && sd.value){
+      hint.textContent = 'ב' + HD_NAMES[sm.value] + ' של שנה זו יש רק 29 ימים';
+    } else {
+      hint.textContent = 'בעברית בוחרים תאריך מלא. אם ידועה רק שנה, עברו ללועזי';
+    }
+  };
+  const open = () => {
+    /* תאריך מלא שכבר רשום נפתח בעברית במקום להיעלם */
+    const n = normDate(txt.value);
+    let h = null;
+    if(n && isFullDate(n)){ const [y, m, dd] = n.split('-').map(Number); h = hdParts(y, m, dd); }
+    sd.innerHTML = opt('', 'יום', !h) +
+      Array.from({length: 30}, (_, i) => opt(i + 1, heNum(i + 1), h && h.d === i + 1)).join('');
+    let ys = opt('', 'שנה', !h);
+    for(let hy = now; hy >= 5600; hy--)
+      /* קו נטוי ולא מקף: מקף בין מספרים בתוך טקסט מימין לשמאל הופך
+         את הסדר ("18–1917"), קו נטוי משאיר אותם יחד */
+      ys += opt(hy, heYear(hy) + ' · ' + (hy - 3761) + '/' + String(hy - 3760).slice(2), h && h.y === hy);
+    sy.innerHTML = ys;
+    fillMonths(h && h.y, h && h.m);
+    show();
+  };
+  const mode = m => {
+    seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === m));
+    row.hidden = m !== 'he';
+    wrap.hidden = m === 'he';
+    if(m === 'he') open(); else hint.textContent = dateHint(txt.value);
+  };
+  seg.querySelectorAll('button').forEach(b => b.onclick = () => mode(b.dataset.m));
+  sy.onchange = () => { fillMonths(+sy.value || null, sm.value); show(); };
+  sm.onchange = sd.onchange = show;
+  txt.oninput = () => { hint.textContent = dateHint(txt.value); };
+}
 const isFullDate = s => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 const dateMin = s => !s ? '' : s.length === 4 ? s + '-01-01' : s.length === 7 ? s + '-01' : s;
 const dateMax = s => !s ? '' : s.length === 4 ? s + '-12-31' : s.length === 7 ? s + '-31' : s;
@@ -5964,7 +6097,16 @@ function personFormHTML(d){
             ? '<textarea id="pf_' + f.k + '" rows="4" placeholder="סיפור, זיכרון, כינוי, או כל פרט ' +
                 'משפחתי אחר שכדאי לדעת">' + esc(d[f.k] || '') + '</textarea>'
             : isDate
-            ? '<div class="datewrap">' +
+            ? '<div class="seg seg-date" id="hds_' + f.k + '">' +
+                '<button type="button" data-m="greg" class="on">לועזי</button>' +
+                '<button type="button" data-m="he">עברי</button>' +
+              '</div>' +
+              '<div class="hdate-row" id="hdr_' + f.k + '" hidden>' +
+                '<select id="hdd_' + f.k + '" aria-label="יום"></select>' +
+                '<select id="hdm_' + f.k + '" aria-label="חודש"></select>' +
+                '<select id="hdy_' + f.k + '" aria-label="שנה"></select>' +
+              '</div>' +
+              '<div class="datewrap" id="dw_' + f.k + '">' +
                 '<label class="datebtn" title="בחירה מלוח שנה">' +
                   '<svg viewBox="0 0 24 24" width="26" height="26" fill="none" ' +
                     'stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' +
@@ -5973,7 +6115,7 @@ function personFormHTML(d){
                   '<input type="date" id="pick_' + f.k + '" max="' + today + '"></label>' +
                 '<input class="datetext" id="pf_' + f.k + '" value="' + esc(d[f.k] || '') +
                   '" placeholder="שנה בלבד, או תאריך מלא" inputmode="numeric">' +
-              '</div><span class="hint">אפשר לרשום רק שנה, למשל 1948</span>'
+              '</div><span class="hint" id="hdh_' + f.k + '">' + dateHint(d[f.k]) + '</span>'
             : '<input id="pf_' + f.k + '" value="' + esc(d[f.k] || '') + '">') +
         '</div>';
   };
@@ -6020,7 +6162,8 @@ function wirePersonForm(root, d){
   // בחירה מלוח שנה ממלאת את שדה הטקסט
   FIELDS.filter(f => f.type === 'date').forEach(f => {
     const pick = root.querySelector('#pick_' + f.k), txt = root.querySelector('#pf_' + f.k);
-    if(pick && txt) pick.onchange = () => { if(pick.value){ txt.value = pick.value; d[f.k] = pick.value; } };
+    if(pick && txt) pick.onchange = () => { if(pick.value){ txt.value = pick.value; d[f.k] = pick.value; txt.oninput(); } };
+    if(txt) wireHebrewDate(root, f.k, txt, d);
   });
   /* הקיפול. כשהמנהל פותח אותו פעם אחת הוא נשאר פתוח לכל הטפסים
      בהמשך הפעלה — מי שממלא הרבה לא צריך לפתוח בכל פעם מחדש. */
