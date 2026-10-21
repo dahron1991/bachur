@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-SwEScYQNnglit30Q0sq3xUndvaLLmhVr6RFsja8EHRw=';
+  script-src 'sha256-vUNDeI+5jAr+XmlWRplyRUIIZ0doJPBDWS+CrCA/WsI=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -184,10 +184,20 @@ body{
   position:fixed; inset:0;
   touch-action:none;              /* חובה: מבטל גלילת דפדפן ומאפשר מחוות משלנו */
   cursor:grab;
+}
+#viewport.grabbing{cursor:grabbing;}
+/* רשת הנקודות זזה עם העץ, ב-55% מהמהירות שלו — כאילו היא נייר רחוק
+   יותר. שכבה נפרדת שזזה ב-transform ולא ציור מחדש של הרקע: נמדד
+   שהזזת background-position על המסך כולו יקרה יותר בגרירה. השכבה
+   גדולה מהמסך בנקודה אחת לכל כיוון, וההיסט נשאר תמיד בטווח של
+   נקודה אחת. היא לא גדלה עם הזום (כמו היום), ובמנוחה אין בה תנועה. */
+#dotGrid{
+  position:absolute; left:0; top:0;
+  width:calc(100% + 26px); height:calc(100% + 26px);
+  pointer-events:none; will-change:transform;
   background-image:radial-gradient(rgba(122,83,52,.10) 1px, transparent 1px);
   background-size:26px 26px;
 }
-#viewport.grabbing{cursor:grabbing;}
 #canvas{position:absolute; top:0; left:0; transform-origin:0 0; touch-action:none;}
 #links{position:absolute; top:0; left:0; overflow:visible;}
 #nodes{position:absolute; top:0; left:0;}
@@ -390,13 +400,8 @@ body{
 .node[data-ph] .sexline{background:var(--wood-soft) !important;}
 .node[data-ph] .name{color:var(--ink-soft); font-style:italic;}
 
-/* כרטיס כפיל — אותו אדם שמוצג גם בענף אחר.
-   הכרטיס עצמו רגיל לגמרי; רק סימן קטן בפינה. */
-.node .mirror{
-  position:absolute; top:5px; inset-inline-start:6px;
-  font-size:12px; line-height:1; color:var(--wood-soft);
-  pointer-events:none;
-}
+/* כרטיס כפיל — אותו אדם שמוצג גם בענף אחר — נראה כמו כל כרטיס
+   אחר, בלי סימן. הסימן ⧉ שהיה בפינה הוסר בהחלטת עיצוב. */
 
 /* ===== אדם שהאורח הוסיף וטרם אושר =====
    מקווקו ועמום, ולא צבע אזהרה: זו אינה שגיאה אלא מצב ביניים.
@@ -408,22 +413,70 @@ body{
      הרקע האטום מסתיר אותם. לסדר את הקווים כדי שיתאימו לשקיפות
      היה שינוי במנוע הפריסה בשביל אפקט.
 
-     **מנוקד ובצבע העץ, ולא מקווקו בקלאי.** מקווקו-קלאי כבר תפוס
-     ל-[data-float] — אדם שאינו מחובר לעץ — ושני מצבים שונים
-     לגמרי במראה זהה הם בדיוק סוג התקלה שאי אפשר לראות בבדיקה
-     אוטומטית. הסרט "ממתין" שמעל התמונה הוא מה שאומר את זה
-     במילים, ולא רק בצבע. */
-  border-style:dotted; border-width:3px; border-color:var(--wood);
+     **מקווקו כמו קו החיבור, ולא מנוקד** (דניאל, 16.10.2026). אותו צבע
+     (--link), אותו עובי (2.5) ואותו קצב (7 על 6) כמו הקו שמוביל אליו,
+     ולכן הקו והמסגרת נקראים כחפץ אחד: "זה עוד לא חלק מהעץ". המנוקד
+     החום הקודם נזנח.
+
+     המסגרת מצוירת כתמונה ולא כ-border-style:dashed. בגבול מקווקו של
+     הדפדפן אי אפשר לקבוע את אורך הקווקוו, והפינות יוצאות שבורות.
+     כאן הקצב בכל צלע מחושב כך שייגמר בדיוק באמצע הפינה, ולכן בכל
+     פינה יש קווקוו מעוגל אחד שלם. התמונה במידות הכרטיס (104×132)
+     בדיוק, ולכן החיתוך ב-14 אינו מותח דבר. נוצרה בסקריפט
+     previews/.src/ניצן-ועלה-מסגרת.py שבתיקיית הפרויקט.
+
+     background-clip: בין הקווקווים רואים את רקע המפה, כמו בקו, ולא
+     את נייר הכרטיס.
+
+     עדיין שונה ממרחף ([data-float]: מקווקו רגיל, בקלאי, עם "!"): צבע
+     אחר, קצב אחר, ורצועת "ממתין" במילים. */
+  border:3px solid transparent;
+  border-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='104' height='132'%3E%3Cg fill='none' stroke='%23A89377' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M5.34 5.34A12.25 12.25 0 0 1 14.00 1.75L90.00 1.75A12.25 12.25 0 0 1 98.66 5.34' stroke-dasharray='7.33 6.28' stroke-dashoffset='3.66'/%3E%3Cpath d='M98.66 5.34A12.25 12.25 0 0 1 102.25 14.00L102.25 118.00A12.25 12.25 0 0 1 98.66 126.66' stroke-dasharray='7.37 6.32' stroke-dashoffset='3.69'/%3E%3Cpath d='M98.66 126.66A12.25 12.25 0 0 1 90.00 130.25L14.00 130.25A12.25 12.25 0 0 1 5.34 126.66' stroke-dasharray='7.33 6.28' stroke-dashoffset='3.66'/%3E%3Cpath d='M5.34 126.66A12.25 12.25 0 0 1 1.75 118.00L1.75 14.00A12.25 12.25 0 0 1 5.34 5.34' stroke-dasharray='7.37 6.32' stroke-dashoffset='3.69'/%3E%3C/g%3E%3C/svg%3E") 14 / 14px stretch;
+  background-clip:padding-box;
   box-shadow:none;
 }
 /* גובר על צבע הגבול לפי דור, שמוגדר למעלה באותה דרגת ספציפיות */
-.node.pending[data-gen]{border-color:var(--wood);}
+.node.pending[data-gen]{border-color:transparent;}
 .node .pendmark{
   position:absolute; inset-inline:0; top:0; z-index:3;
   background:var(--wood); color:var(--cream);
   font-family:var(--font-ui); font-size:9.5px; font-weight:700;
   letter-spacing:.04em; text-align:center; padding:2px 0;
   pointer-events:none;
+}
+
+/* הניצן של אדם ממתין (כיוון 2 "ניצן ועלה", דניאל 16.10.2026).
+   עיגול בנקודה שבה הקו פוגש את הכרטיס, ממנו גבעול קטן ושני עלים,
+   והכול מתנועע קלות ברוח כל עוד האדם ממתין. נעלם מעצמו כשהאדם
+   מאושר, כי אז הכרטיס כבר אינו ממתין והניצן לא מצויר.
+   ילד: בראש הכרטיס, על הירידה. בן זוג: בשפה העליונה, בצד שפונה
+   לבן הזוג (.flip — הגבעול נוטה לכיוון השני).
+   ירוק כאן כן נראה, אף שבקווים ויתרנו עליו: זו צורה בפני עצמה ולא
+   קצה של קו. נמצא בתוך #nodes, ולכן כל ציור בונה אותו מחדש. */
+.sprout{
+  position:absolute; width:56px; height:62px; margin:-57px 0 0 -28px;
+  pointer-events:none; z-index:4; overflow:visible;
+}
+.sprout.flip{transform:scaleX(-1);}
+.sprout .sp-sway, .sprout .sp-core{transform-box:view-box; transform-origin:20px 41px;}
+.sprout .sp-a, .sprout .sp-b{transform-box:view-box; transform-origin:30px 21px;}
+.sprout .sp-sway{animation:sprout-sway 4.2s ease-in-out infinite;}
+@keyframes sprout-sway{
+  0%,100%{transform:rotate(0);} 33%{transform:rotate(5deg);} 66%{transform:rotate(-4deg);}
+}
+/* פתיחה ראשונה, רק לאדם שנוסף עכשיו: עיגול, גבעול, עלה, עלה. כ-2
+   שניות (דניאל ביקש לקחת את הזמן). אחריה מתחילה התנועה ברוח. */
+.sprout.intro .sp-sway{animation:sprout-sway 4.2s ease-in-out 2s infinite;}
+.sprout.intro .sp-core{animation:sprout-pop .5s ease-out backwards;}
+.sprout.intro .sp-stem{stroke-dasharray:24; animation:sprout-stem .6s cubic-bezier(.4,0,.2,1) .4s backwards;}
+.sprout.intro .sp-a{animation:sprout-leaf .65s ease-out .9s backwards;}
+.sprout.intro .sp-b{animation:sprout-leaf .65s ease-out 1.15s backwards;}
+@keyframes sprout-pop{from{transform:scale(0);} 60%{transform:scale(1.35);} to{transform:scale(1);}}
+@keyframes sprout-stem{from{stroke-dashoffset:24;} to{stroke-dashoffset:0;}}
+@keyframes sprout-leaf{from{transform:scale(0);} 70%{transform:scale(1.12);} to{transform:scale(1);}}
+@media (prefers-reduced-motion:reduce){
+  .sprout .sp-sway, .sprout.intro .sp-sway, .sprout.intro .sp-core, .sprout.intro .sp-stem,
+  .sprout.intro .sp-a, .sprout.intro .sp-b{animation:none;}
 }
 
 /* הרצועה שמסבירה אותם */
@@ -435,6 +488,57 @@ body{
   pointer-events:none;        /* אסור שתחסום מחווה על העץ שמתחתיה */
 }
 .pend-bar[hidden]{display:none;}
+
+/* יום הולדת היום (כיוון 5). זהב ולא ירוק: הילה ירוקה סביב כרטיס
+   כבר אומרת "הכרטיס הזה פתוח" (.node.is-open), וירוק הוא גם צבע
+   הלחיצה הארוכה. רק למי שבחיים — אצל מי שנפטר אין שום סימון,
+   כדי שלא ייכנסו בדלת האחורית האזכרות שהוחלט לא לבנות. */
+.node.bd-on{overflow:visible; box-shadow:0 0 0 3px #E8B04A, var(--shadow-card);}
+.node.bd-on .face{border-radius:12px 12px 0 0;}
+.node.bd-on.bd-pulse{animation:bdPulse 2.2s ease-out 3;}
+@keyframes bdPulse{
+  0%{box-shadow:0 0 0 3px #E8B04A, 0 0 0 3px rgba(232,176,74,.6), var(--shadow-card);}
+  70%{box-shadow:0 0 0 3px #E8B04A, 0 0 0 18px rgba(232,176,74,0), var(--shadow-card);}
+  100%{box-shadow:0 0 0 3px #E8B04A, 0 0 0 3px rgba(232,176,74,0), var(--shadow-card);}
+}
+.bd-tag{position:absolute; top:-13px; inset-inline:0; margin:0 auto; width:max-content;
+  background:linear-gradient(90deg,#E0607E,#E8B04A); color:#fff; font:700 12px var(--font-ui);
+  padding:3px 10px; border-radius:999px; z-index:3; pointer-events:none;
+  box-shadow:0 2px 6px rgba(51,40,31,.25); text-shadow:0 1px 1px rgba(0,0,0,.2);}
+/* הקונפטי רץ כל הזמן, לבקשת דניאל */
+.bd-bit{position:absolute; pointer-events:none; z-index:2; opacity:0;
+  animation:bdRise var(--t,2.6s) ease-out var(--dl,0s) infinite;}
+@keyframes bdRise{0%{opacity:0; transform:translate(0,0) rotate(0);} 12%{opacity:1;}
+  80%{opacity:.9;} 100%{opacity:0; transform:translate(var(--dx),var(--dy,-120px)) rotate(var(--rot,260deg));}}
+.bd-pill{display:block; margin:6px auto 0; max-width:min(92vw,420px);
+  background:#FDF2DF; color:#5E4E3E; border:1px solid #EBC98A; border-radius:11px;
+  padding:7px 13px; font:600 12.5px var(--font-ui); cursor:pointer; pointer-events:auto;}
+.bd-pill b{color:#33281F;}
+.bd-pill[hidden]{display:none;}
+
+/* ברכת חג, לפי הלוח העברי. שורה משלה מתחת לכותרת — שורת
+   "4 דורות · 23 בני משפחה" נשארת במקומה (דניאל, 16.10). */
+.hol{display:flex; width:max-content; max-width:min(92vw,420px); margin:4px auto 0;
+  align-items:center; gap:7px; pointer-events:none;
+  font:700 13px var(--font-ui); white-space:nowrap;
+  background:rgba(255,252,246,.85); border-radius:11px; padding:4px 12px;}
+.hol[hidden]{display:none;}
+.hol svg{flex:none; overflow:visible;}
+.hol.hol-quiet{font-weight:600; color:var(--ink-soft);}
+.hol .hol-sway{animation:holSway 4s ease-in-out infinite; transform-origin:50% 0; transform-box:fill-box;}
+@keyframes holSway{50%{transform:rotate(7deg);}}
+.hol .hol-flk{transform-origin:50% 100%; transform-box:fill-box; animation:holFlick 1.2s ease-in-out infinite alternate;}
+@keyframes holFlick{0%{transform:scaleY(1) rotate(-4deg);} 50%{transform:scaleY(1.2) rotate(3deg);} 100%{transform:scaleY(.9) rotate(-1deg);}}
+.hol .hol-wave{animation:holWave 2.4s ease-in-out infinite; transform-origin:0 50%; transform-box:fill-box;}
+@keyframes holWave{50%{transform:skewY(-6deg) scaleX(.94);}}
+.hol .hol-grow{animation:holGrow 3s ease-in-out infinite; transform-origin:50% 100%; transform-box:fill-box;}
+@keyframes holGrow{0%,100%{transform:scale(.85);} 50%{transform:scale(1.05);}}
+.hol .hol-beat{animation:holBeat 1.6s ease-in-out infinite; transform-origin:50% 50%; transform-box:fill-box;}
+@keyframes holBeat{0%,60%,100%{transform:scale(1);} 30%{transform:scale(1.18);}}
+@media (prefers-reduced-motion:reduce){
+  .node.bd-on.bd-pulse, .hol .hol-sway, .hol .hol-flk, .hol .hol-wave, .hol .hol-grow, .hol .hol-beat{animation:none;}
+  .bd-bit{display:none;}
+}
 
 /* כפתור פתיחה/סגירה של ענף */
 .toggle{
@@ -460,6 +564,12 @@ body{
   transition:opacity .3s;
 }
 #login.hide{opacity:0; pointer-events:none;}
+/* כניסה כשורש: בזמן הטעינה רואים רק את הזוג שבשורש באמצע המסך,
+   ומאחוריו עץ מצויר שצומח. שאר העץ, הקווים והכפתורים מחכים לסוף */
+#entryTree{position:absolute; inset:0; z-index:0; pointer-events:none; width:100%; height:100%; overflow:visible;}
+#entryTree .e-wood > path:first-child{fill:var(--wood);}
+body.entry-on #links, body.entry-on .toggle, body.entry-on .node:not(.entry-couple){opacity:0;}
+.node.entry-couple, .node.entry-ph{pointer-events:none;}
 .login-card{width:100%; max-width:340px; text-align:center;}
 /* ברירת המחדל, כשאין ללוגו תמונה: עיגול עם האות הראשונה של שם
    המשפחה. זה מה שרואה משפחה שעוד לא העלתה לוגו משלה. */
@@ -1343,6 +1453,9 @@ mark{
   <!-- ההסבר לכרטיסים המקווקוים. בלי כפתור סגירה: זו אינה הודעה
        שצריך לאשר אלא מצב, והיא נעלמת מעצמה כשהתור מתנקה. -->
   <p class="pend-bar" id="pendBar" hidden></p>
+  <!-- כיוון 5: יום הולדת היום, וברכת חג לפי הלוח העברי -->
+  <button class="bd-pill" id="bdPill" hidden></button>
+  <p class="hol" id="holLine" hidden></p>
   <div class="more" id="moreMenu" hidden>
     <button class="chip" id="btnSearch">חיפוש</button>
     <button class="chip" id="btnBday">ימי הולדת</button>
@@ -1364,11 +1477,12 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 20.10.2026 · 22:45</p>
+    <p class="build" id="buildStamp">גרסה 22.10.2026 · 01:07</p>
   </div>
 </header>
 
 <div id="viewport">
+  <div id="dotGrid" aria-hidden="true"></div>
   <div id="canvas">
     <svg id="links" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="nodes"></div>
@@ -2379,9 +2493,9 @@ const visiblePeople = () => Object.values(DB.people)
 let BLOOD = new Set();      // מי מקבל מקום קבוע לפי קו הדם
 const hostOf = {};          // אצל איזה בן זוג מוצגים הילדים של זוגיות משותפת
 
-/* כשגם הבעל וגם האישה הם בני המשפחה, הזוגיות מצוירת בשני המקומות.
-   הילדים תלויים רק אצל אחד מהם — זה ה"מארח" — ואפשר להעביר אותם
-   לצד השני בלחיצה על הכפתור שם. */
+/* כשגם הבעל וגם האישה הם בני המשפחה, הזוגיות מצוירת רק אצל אחד
+   מהם — זה ה"מארח" — יחד עם הילדים. בצד השני נשאר רק כפתור עם
+   מספר, ולחיצה עליו מעבירה את הזוגיות והילדים לשם. */
 function hostFor(u){
   if(u.partners.includes(DB.root)) return DB.root;   // הזוג המייסד קבוע
   const h = hostOf[u.id];
@@ -2681,26 +2795,47 @@ function layout(){
 const svg     = document.getElementById('links');
 const nodesEl = document.getElementById('nodes');
 const canvas  = document.getElementById('canvas');
+const dotGrid = document.getElementById('dotGrid');   // רשת הנקודות שברקע
 const NS = 'http://www.w3.org/2000/svg';
 
 /* עובדים במערכת צירים לוגית משמאל לימין, ומהפכים כאן ל-RTL */
 const RX = x => boardW - x - CARD_W;
 const cx = id => RX(pos[id].x) + CARD_W/2;
 
-function line(x1,y1,x2,y2){
+function line(x1,y1,x2,y2,k){
   const l = document.createElementNS(NS,'line');
+  if(k) l.setAttribute('data-seg', k);
   l.setAttribute('x1',x1); l.setAttribute('y1',y1);
   l.setAttribute('x2',x2); l.setAttribute('y2',y2);
   l.setAttribute('stroke','var(--link)');
   l.setAttribute('stroke-width','2.5');
   l.setAttribute('stroke-linecap','round');
   svg.appendChild(l);
+  return l;
 }
 
-function drawLinks(){
+/* הקווים כרשימה של קטעים. לכל קטע מפתח קבוע — אותו קטע מקבל אותו
+   מפתח בכל ציור — כדי שהתנועה תדע מה חדש, מה נעלם ומה רק זז.
+   כל קטע מכוון מנקודת המוצא שלו (x1,y1) אל הקצה: קו הזוג מבן
+   המשפחה אל בן הזוג, הגזע כלפי מטה, הקו האופקי מהגזע החוצה לשני
+   הצדדים, והירידה מהקו האופקי אל הילד. בכיוון הזה הקו צומח.
+   occs: לכל הופעה של זוגיות — מי בן המשפחה (a), מי בן הזוג (b),
+   הילדים, ומפתחות הקטעים שלה לפי תפקיד. */
+function linkSegs(){
+  const segs = {}, occs = [];
+  const put = (k, x1, y1, x2, y2) => {
+    segs[k] = {x1, y1, x2, y2, len: Math.abs(x2 - x1) + Math.abs(y2 - y1)};
+    return k;
+  };
+  const chain = (pre, pts) =>
+    pts.slice(1).map((p, i) => put(pre + i, pts[i][0], pts[i][1], p[0], p[1]));
+
   DB.unions.forEach(u => u._occ.forEach(oc => {
-    const a = oc.a, b = oc.b;
+    const a = oc.a, b = (oc.b && pos[oc.b]) ? oc.b : null;
     if(!a || !pos[a]) return;
+    const O = u.id + '@' + a;
+    const o = {k:O, u:u.id, a, b, kids:[], couple:[], trunk:[], bus:[], drops:{}, busC:0};
+    occs.push(o);
     const y = pos[a].y + CARD_H/2;
     const midX = b ? (cx(a) + cx(b))/2 : cx(a);
     let dropFrom = b ? y : pos[a].y + CARD_H;
@@ -2714,34 +2849,257 @@ function drawLinks(){
       const xl = Math.min(cx(a), cx(b)) + CARD_W/2;
       const xr = Math.max(cx(a), cx(b)) - CARD_W/2;
       const dipY = y + 36, STUB = 12;
-      line(xl, y, xl + STUB, y);
-      line(xl + STUB, y, xl + STUB, dipY);
-      line(xl + STUB, dipY, xr - STUB, dipY);
-      line(xr - STUB, dipY, xr - STUB, y);
-      line(xr - STUB, y, xr, y);
+      const pts = [[xl, y], [xl + STUB, y], [xl + STUB, dipY],
+                   [xr - STUB, dipY], [xr - STUB, y], [xr, y]];
+      if(cx(a) > cx(b)) pts.reverse();
+      o.couple = chain(O + ':c', pts);
       dropFrom = dipY;
     } else {
-      line(cx(a), y, cx(b), y);
+      o.couple = [put(O + ':c0', cx(a), y, cx(b), y)];
     }
 
     const kids = (oc.host ? kidsOf(u) : []).filter(k => pos[k]);
     if(!kids.length) return;
+    o.kids = kids;
 
     const busY  = pos[a].y + CARD_H + (LEVEL_H - CARD_H)/2;
     const kidXs = kids.map(cx);
-    const busC  = (Math.min(...kidXs) + Math.max(...kidXs)) / 2;
+    const lo = Math.min(...kidXs), hi = Math.max(...kidXs);
+    const busC  = (lo + hi) / 2;
+    o.busC = busC;
 
     if(Math.abs(busC - midX) < 1){
-      line(midX, dropFrom, midX, busY);
+      o.trunk = chain(O + ':t', [[midX, dropFrom], [midX, busY]]);
     } else {
       const elbowY = busY - 26;
-      line(midX, dropFrom, midX, elbowY);
-      line(midX, elbowY, busC, elbowY);
-      line(busC, elbowY, busC, busY);
+      o.trunk = chain(O + ':t', [[midX, dropFrom], [midX, elbowY],
+                                 [busC, elbowY], [busC, busY]]);
     }
-    line(Math.min(...kidXs), busY, Math.max(...kidXs), busY);
-    kids.forEach(k => line(cx(k), busY, cx(k), pos[k].y));
+    /* הקו האופקי בשני חצאים שיוצאים מהגזע. ילד יחיד — אין קו אופקי */
+    if(hi - lo >= 1)
+      o.bus = [put(O + ':ba', busC, busY, lo, busY), put(O + ':bb', busC, busY, hi, busY)];
+    kids.forEach(k => { o.drops[k] = put(O + ':d:' + k, cx(k), busY, cx(k), pos[k].y); });
   }));
+  return {segs, occs};
+}
+
+/* הקו אל אדם ממתין מקווקו, באותו קצב כמו המסגרת שלו (דניאל,
+   16.10.2026): הירידה אל ילד ממתין, וקו הזוג אל בן זוג ממתין. */
+/* var ולא const: render יכול לרוץ לפני שהשורה הזאת הוגדרה */
+var PEND_DASH = '7 6';
+function pendKey(k){ return isPending(DB.people[KEY[k] || k]); }
+
+function drawLinks(){
+  const L = linkSegs();
+  L.occs.forEach(o => {
+    const pend = new Set([...o.kids.filter(pendKey).map(k => o.drops[k]),
+                          ...(o.b && pendKey(o.b) ? o.couple : [])]);
+    [...o.couple, ...o.trunk, ...o.bus, ...o.kids.map(k => o.drops[k])].forEach(k => {
+      const g = L.segs[k];
+      const l = line(g.x1, g.y1, g.x2, g.y2, k);
+      if(pend.has(k)){ l.setAttribute('data-pend', '1'); l.setAttribute('stroke-dasharray', PEND_DASH); }
+    });
+  });
+}
+
+/* הניצן על כל כרטיס ממתין שמצויר עכשיו. sproutIntro — האדם שנוסף
+   הרגע: רק אצלו הניצן נפתח, ואצל כל השאר הוא כבר פתוח. */
+var sproutIntro = null;
+function drawSprouts(){
+  const L = linkSegs();
+  const add = (k, x, flip) => {
+    const el = document.createElementNS(NS, 'svg');
+    el.setAttribute('class', 'sprout' + (flip ? ' flip' : '') +
+                    (sproutIntro && (KEY[k] || k) === sproutIntro ? ' intro' : ''));
+    el.setAttribute('viewBox', '0 0 40 44');
+    el.setAttribute('aria-hidden', 'true');
+    el.style.left = x + 'px';
+    el.style.top  = pos[k].y + 'px';
+    el.innerHTML =
+      '<g class="sp-sway">' +
+        '<path class="sp-stem" d="M20 41 C21 33 25 27 30 21" fill="none" stroke="var(--g5)" stroke-width="2.2" stroke-linecap="round"/>' +
+        '<path class="sp-a" d="M30 21 C22 21 16 16 15 10 C22 10 28 14 30 21Z" fill="var(--forest-soft)"/>' +
+        '<path class="sp-b" d="M30 21 C36 18 40 12 40 6 C34 8 30 13 30 21Z" fill="var(--g5)"/>' +
+      '</g><circle class="sp-core" cx="20" cy="41" r="3.6" fill="var(--forest)"/>';
+    nodesEl.appendChild(el);
+  };
+  L.occs.forEach(o => {
+    o.kids.forEach(k => { if(pendKey(k) && pos[k]) add(k, cx(k), false); });
+    if(o.b && pendKey(o.b) && pos[o.b] && pos[o.a]){
+      const x0 = RX(pos[o.b].x), toA = RX(pos[o.a].x) > x0;
+      add(o.b, toA ? x0 + CARD_W - 18 : x0 + 18, !toA);
+    }
+  });
+  sproutIntro = null;
+}
+
+/* ============================================================
+   כיוון 5: ימים מיוחדים — יום הולדת היום, וחגים לפי הלוח העברי
+   ============================================================ */
+
+/* התאריך העברי מחושב בדפדפן עצמו (Intl), בלי פנייה לרשת. החג מוצג
+   ביום האזרחי שלו, מחצות עד חצות, ולא מהשקיעה. */
+/* נבנה בשימוש הראשון ולא בטעינת הדף: בניית לוח עברי ב-Intl לוקחת
+   כ-8 אלפיות שנייה. updateDayLines נשענת על זה כדי לדעת אם לדחות */
+let HEB_FMT = null;
+function hebParts(dt){
+  const o = {};
+  HEB_FMT = HEB_FMT || new Intl.DateTimeFormat('en-u-ca-hebrew', {day:'numeric', month:'long'});
+  HEB_FMT.formatToParts(dt).forEach(p => { o[p.type] = p.value; });
+  // אדר בשנה פשוטה ואדר ב' בשנה מעוברת הם אותו "אדר" לעניין פורים
+  return {d: Number(o.day), m: o.month === 'Adar II' ? 'Adar' : o.month, raw: o.month};
+}
+const noonOf = (dt, plus) => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + (plus || 0), 12);
+
+/* יום העצמאות: ה' באייר; שישי או שבת ← חמישי שלפני, שני ← שלישי */
+const isAtzmaut = (h, dow) => h.m === 'Iyar' &&
+  (h.d === 5 && dow >= 2 && dow <= 4 || (h.d === 4 || h.d === 3) && dow === 4 || h.d === 6 && dow === 2);
+
+/* ימים טובים — ימים שאסורים במלאכה (בארץ, יום אחד). בהם, ורק בהם,
+   הברכה מופיעה כבר ביום שלפני, בערב החג (דניאל, 21.10). חנוכה,
+   פורים ויום העצמאות אינם ימים טובים, ולכן אין להם ערב. */
+const isYomTov = h => !!h && (h.k === 'rh' || h.k === 'yk' || h.k === 'simchat' || h.k === 'shavuot' ||
+  (h.k === 'sukkot' && h.day === 1) || (h.k === 'pesach' && (h.day === 1 || h.day === 7)));
+
+function holidayOn(input){
+  const today = holidayOnDay(input);
+  if(isYomTov(today)) return today;
+  /* ערב חג גובר על חול המועד: הושענא רבה הוא ערב שמחת תורה,
+     ושישי של פסח הוא ערב שביעי של פסח */
+  const next = holidayOnDay(noonOf(input, 1));
+  return isYomTov(next) ? Object.assign({}, next, {erev: true}) : today;
+}
+
+function holidayOnDay(input){
+  const dt = noonOf(input), h = hebParts(dt), dow = dt.getDay();   // 0 ראשון … 6 שבת
+  const at = (d, m) => h.d === d && h.m === m;
+  if(h.m === 'Tishri' && (h.d === 1 || h.d === 2)) return {k:'rh'};
+  if(at(10, 'Tishri')) return {k:'yk'};
+  if(h.m === 'Tishri' && h.d >= 15 && h.d <= 21) return {k:'sukkot', day: h.d - 14};
+  if(at(22, 'Tishri')) return {k:'simchat'};
+  // חנוכה: כסלו הוא 29 או 30 יום, ולכן סופרים אחורה עד כ"ה בכסלו
+  for(let i = 0; i < 8; i++){
+    const b = hebParts(noonOf(dt, -i));
+    if(b.d === 25 && b.m === 'Kislev') return {k:'chanukah', night: i + 1};
+  }
+  if(at(15, 'Shevat')) return {k:'tubishvat'};
+  if(at(14, 'Adar') && h.raw !== 'Adar I') return {k:'purim'};
+  if(h.m === 'Nisan' && h.d >= 15 && h.d <= 21) return {k:'pesach', day: h.d - 14};
+  // יום השואה: כ"ז בניסן; שישי ← חמישי, ראשון ← שני
+  if(h.m === 'Nisan' && (h.d === 27 && dow !== 5 && dow !== 0 || h.d === 26 && dow === 4 || h.d === 28 && dow === 1))
+    return {k:'shoah'};
+  if(isAtzmaut(h, dow)) return {k:'atzmaut'};
+  if(h.m === 'Iyar'){
+    const nx = noonOf(dt, 1);
+    if(isAtzmaut(hebParts(nx), nx.getDay())) return {k:'zikaron'};
+    if(h.d === 18) return {k:'lagbaomer'};
+    if(h.d === 28) return {k:'yerushalayim'};
+  }
+  if(at(6, 'Sivan')) return {k:'shavuot'};
+  if(h.m === 'Av' && (h.d === 9 && dow !== 6 || h.d === 10 && dow === 0)) return {k:'tishabeav'};
+  if(at(15, 'Av')) return {k:'tubeav'};
+  return null;
+}
+
+/* מה מופיע ביום החג: [סמל, ברכה, צבע, שקט?].
+   ביום השואה, ביום הזיכרון ובתשעה באב — כלום, בכוונה: ברכה
+   הייתה פוגעת, ונר היה מחזיר את האזכרות שהוחלט לא לבנות. */
+const holSvg = (w, h, inner) =>
+  '<svg aria-hidden="true" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '">' + inner + '</svg>';
+function chanukiahSvg(n){
+  let s = '<rect x="2" y="21" width="44" height="3" rx="1.5" fill="#A8803E"/><rect x="22.5" y="13" width="3" height="9" fill="#A8803E"/>';
+  for(let i = 0; i < 8; i++){
+    const x = i < 4 ? 4 + i * 5 : 29 + (i - 4) * 5;
+    s += '<rect x="' + (x - 1) + '" y="14" width="2.5" height="7" rx="1" fill="#C8A86B"/>';
+    // הנרות מוצבים מימין לשמאל: בלילה ה-n דולקים n הנרות הימניים
+    if(7 - i < n) s += '<path class="hol-flk" d="M' + x + ' 6c-2 3-2.5 5 0 7 2.5-2 2-4 0-7z" fill="#F4A340"/>';
+  }
+  return holSvg(48, 25, s + '<path class="hol-flk" d="M24 1c-2 3-2.5 5 0 7 2.5-2 2-4 0-7z" fill="#F4A340"/>');
+}
+const HOLIDAYS = {
+  rh: () => [holSvg(22,26,'<g class="hol-sway"><path d="M11 1v4" stroke="#6B4A2B" stroke-width="1.6"/><path d="M8 5l3 2 3-2-1 3H9z" fill="#9B3B2E"/><circle cx="11" cy="16" r="9" fill="#C0453A"/><circle cx="8" cy="14" r="2" fill="#E08074" opacity=".7"/></g>'), 'שנה טובה', '#9B3B2E'],
+  yk: () => ['', 'גמר חתימה טובה', '', true],
+  sukkot: h => [holSvg(26,24,'<rect x="4" y="9" width="18" height="13" fill="none" stroke="#9A7C46" stroke-width="1.8"/><g class="hol-sway"><path d="M1 9c4-4 8-4 12-1 4-3 8-3 12 1" fill="none" stroke="#4C8A5C" stroke-width="2.6" stroke-linecap="round"/><circle cx="9" cy="14" r="1.8" fill="#E8B04A"/><circle cx="17" cy="15" r="1.8" fill="#C0453A"/></g>'), h.day === 1 ? 'חג סוכות שמח' : 'מועדים לשמחה', '#4C6B3A'],
+  simchat: () => [holSvg(26,22,'<g class="hol-sway"><rect x="3" y="4" width="5" height="16" rx="2.5" fill="#8A6234"/><rect x="18" y="4" width="5" height="16" rx="2.5" fill="#8A6234"/><rect x="7" y="6" width="12" height="12" fill="#FFF7E6" stroke="#C8A86B"/><path d="M10 10h6M10 13h6" stroke="#C8A86B"/></g>'), 'חג שמח · שמחת תורה', '#7A5334'],
+  chanukah: h => [chanukiahSvg(h.night), 'חנוכה שמח', '#A8692A'],
+  tubishvat: () => [holSvg(22,24,'<path d="M11 23V12" stroke="#7A5334" stroke-width="2"/><g class="hol-grow"><path d="M11 13C5 13 3 8 4 4c5 0 8 3 7 9z" fill="#6E9B84"/><path d="M11 11c5 0 7-4 7-8-5 0-8 3-7 8z" fill="#4C8A5C"/><circle cx="7" cy="7" r="1.6" fill="#F4C9D6"/><circle cx="15" cy="5" r="1.6" fill="#F4C9D6"/></g>'), 'ט״ו בשבט שמח', '#3F7A55'],
+  purim: () => [holSvg(28,18,'<g class="hol-sway"><path d="M2 4c4-2 8-2 12 1 4-3 8-3 12-1-1 7-4 11-8 11-2 0-3-2-4-3-1 1-2 3-4 3-4 0-7-4-8-11z" fill="#8E6CC8"/><ellipse cx="9" cy="8" rx="2.6" ry="1.8" fill="#FFFCF6"/><ellipse cx="19" cy="8" rx="2.6" ry="1.8" fill="#FFFCF6"/><path d="M26 4l2-3" stroke="#E8B04A" stroke-width="1.6"/></g>'), 'פורים שמח', '#6E4FA8'],
+  pesach: h => [holSvg(24,22,'<g class="hol-sway"><rect x="2" y="4" width="20" height="15" rx="2" fill="#E9C98E"/><path d="M5 8h14M5 12h14M5 16h14" stroke="#B88A4A" stroke-dasharray="1.5 2.2" stroke-width="1.4"/></g>'), (h.day === 1 || h.day === 7) ? 'חג פסח שמח' : 'מועדים לשמחה', '#8A6234'],
+  atzmaut: () => [holSvg(26,20,'<rect x="1" y="1" width="2" height="19" fill="#7A6A5A"/><g class="hol-wave"><rect x="3" y="2" width="21" height="14" fill="#fff" stroke="#D8D8E0" stroke-width=".6"/><rect x="3" y="4" width="21" height="2" fill="#2F5DAA"/><rect x="3" y="12" width="21" height="2" fill="#2F5DAA"/><path d="M13.5 6.6l2.2 3.8h-4.4zM13.5 11.4l-2.2-3.8h4.4z" fill="none" stroke="#2F5DAA" stroke-width=".8"/></g>'), 'חג עצמאות שמח', '#2F5DAA'],
+  lagbaomer: () => [holSvg(24,22,'<path d="M4 21l16-5M4 16l16 5" stroke="#7A5334" stroke-width="2.2" stroke-linecap="round"/><path class="hol-flk" d="M12 2c-5 6-6 10-1 15 6-3 5-8 1-15z" fill="#F08A4B"/><path class="hol-flk" d="M12 8c-2 3-2 5 0 8 2-2 2-5 0-8z" fill="#F2C94C"/>'), 'ל״ג בעומר שמח', '#B5562A'],
+  yerushalayim: () => [holSvg(26,20,'<path d="M1 19V8h3V5h3v3h3V5h3v3h3V5h3v3h3V5h3v14z" fill="#E3CFA5" stroke="#B89A66" stroke-width=".8"/><path d="M11 19v-5a2 2 0 0 1 4 0v5" fill="#B89A66"/>'), 'יום ירושלים', '#8A6234'],
+  shavuot: () => [holSvg(22,24,'<g class="hol-sway"><path d="M11 23V7M7 23l4-10M15 23l-4-10" stroke="#C8A15A" stroke-width="1.6"/><ellipse cx="11" cy="5" rx="2" ry="4" fill="#E2B85C"/><ellipse cx="6.5" cy="10" rx="1.8" ry="3.4" fill="#E2B85C" transform="rotate(-25 6.5 10)"/><ellipse cx="15.5" cy="10" rx="1.8" ry="3.4" fill="#E2B85C" transform="rotate(25 15.5 10)"/></g>'), 'חג שבועות שמח', '#9A7C46'],
+  tubeav: () => [holSvg(20,18,'<path class="hol-beat" d="M10 17C2 11 1 7 3 4s6-3 7 1c1-4 5-4 7-1s1 7-7 13z" fill="#E0607E"/>'), 'ט״ו באב', '#B0456A']
+};
+
+/* מי חוגג היום: רק מי שבחיים ויש לו יום וחודש. daysUntil היא
+   אותה ספירה של רשימת ימי ההולדת, כך ששני המקומות מסכימים תמיד. */
+const celebrantsToday = () => visiblePeople()
+  .filter(p => !p.death && !p.placeholder && isFullDate(p.birth) && daysUntil(p.birth) === 0);
+
+/* ההבהוב רץ שלוש פעמים, פעם אחת לכל אדם בכל כניסה — ולא בכל
+   ציור מחדש של העץ. הקונפטי עצמו רץ כל הזמן. */
+const bdPulsed = new Set();
+/* מחושב פעם אחת בכל ציור (render), ולא פעם לכל כרטיס */
+let bdToday = new Set();
+const BD_COLS = ['#E8B04A','#E0607E','#3FA7B5','#7BC47F','#8E6CC8','#F08A4B','#4E9BD9','#F2C94C','#D94F70',
+                 '#5CC6A8','#B07CE0','#F5A25D','#E0607E','#3FA7B5','#F2C94C','#8E6CC8','#7BC47F','#F08A4B'];
+function markBirthday(el, id){
+  el.classList.add('bd-on');
+  const tag = document.createElement('span');
+  tag.className = 'bd-tag'; tag.textContent = 'יום הולדת שמח';
+  el.appendChild(tag);
+  if(!motionOK()) return;
+  BD_COLS.forEach((c, i) => {
+    const b = document.createElement('span'), shape = i % 3;   // ריבוע, עיגול, רצועה
+    const w = shape === 2 ? 4 : 8 + (i % 2) * 2, h = shape === 2 ? 13 : w;
+    b.className = 'bd-bit';
+    Object.assign(b.style, {width: w + 'px', height: h + 'px', background: c,
+      borderRadius: shape === 1 ? '50%' : '2px', left: (-16 + i * 7) + 'px', top: (8 + (i % 4) * 6) + 'px'});
+    b.style.setProperty('--dx', ((i % 2 ? 1 : -1) * (14 + (i * 7) % 30)) + 'px');
+    b.style.setProperty('--dy', '-' + (100 + (i * 13) % 50) + 'px');
+    b.style.setProperty('--rot', (180 + i * 40) + 'deg');
+    b.style.setProperty('--t', (2.2 + (i % 4) * .35).toFixed(2) + 's');
+    b.style.setProperty('--dl', (i * .15).toFixed(2) + 's');
+    el.appendChild(b);
+  });
+  if(!bdPulsed.has(id)){ bdPulsed.add(id); el.classList.add('bd-pulse'); }
+}
+
+/* השורות שמתחת לכותרת: מי חוגג היום (לחיצה פותחת את העץ עד אליו),
+   וברכת החג */
+function updateDayLines(){
+  const pill = document.getElementById('bdPill');
+  const who = celebrantsToday();
+  pill.hidden = !who.length;
+  if(who.length){
+    const p = who[0], age = ageAtNextBirthday(p.birth);
+    const names = who.map(x => '<b>' + esc(x.name) + '</b>');
+    pill.innerHTML = who.length === 1
+      ? 'היום יום ההולדת של ' + names[0] + ', ' + (p.gender === 'male' ? 'בן ' : 'בת ') + age + ' · להראות בעץ'
+      : 'היום יום הולדת ל' + names.slice(0, -1).join(', ') + ' ול' + names[names.length - 1] + ' · להראות בעץ';
+    pill.onclick = () => {
+      const ids = who.map(x => x.id);
+      ids.forEach(id => revealTo(id));
+      frameOn(ids);
+    };
+  }
+  /* בפעם הראשונה החג מחושב רק אחרי שהפריים הראשון צויר: בניית הלוח
+     העברי לוקחת כ-9 אלפיות שנייה, והיא עיכבה את הכרטיסים של "כניסה
+     כשורש". מהפעם השנייה החישוב מיידי. */
+  if(HEB_FMT) updateHolLine();
+  else if(!holLineWait){ holLineWait = true; requestAnimationFrame(() => setTimeout(() => { holLineWait = false; updateHolLine(); }, 0)); }
+}
+let holLineWait = false;
+function updateHolLine(){
+  const line = document.getElementById('holLine');
+  const h = holidayOn(new Date()), v = h && HOLIDAYS[h.k] ? HOLIDAYS[h.k](h) : null;
+  line.hidden = !v;
+  if(v){
+    line.innerHTML = v[0] + '<span>' + v[1] + '</span>';
+    line.style.color = v[2];
+    line.classList.toggle('hol-quiet', !!v[3]);
+  }
 }
 
 function buildNode(key){
@@ -2762,12 +3120,12 @@ function buildNode(key){
   el.style.left = RX(pos[key].x) + 'px';
   el.style.top  = pos[key].y + 'px';
   el.innerHTML =
-    (isMirror ? '<span class="mirror" title="מופיע/ה גם במקום אחר בעץ">⧉</span>' : '') +
     (FLOATING.has(key) ? '<span class="floatmark" title="לא מחובר/ת לעץ">!</span>' : '') +
     (isPending(p) ? '<span class="pendmark">ממתין</span>' : '') +
     '<div class="face">' + avatarInner(p) + '</div>' +
     '<div class="sexline"></div>' +
     '<div class="name"><span>' + esc(p.name) + '</span></div>';
+  if(!isMirror && bdToday.has(p.id)) markBirthday(el, p.id);
   nodesEl.appendChild(el);
 }
 
@@ -2799,6 +3157,7 @@ function buildToggles(){
     btn.className = 'toggle' + (shown ? ' open' : '') + (open && !shown ? ' moved' : '');
     btn.dataset.union = u.id;
     btn.dataset.side  = oc.side;
+    btn.dataset.at    = anchor;
     btn.textContent = shown ? '▴' : (total ? String(total) : '+');
     btn.title = shown ? 'סגירת הענף'
               : open  ? 'העברת הילדים לצד הזה'
@@ -2812,7 +3171,10 @@ function buildToggles(){
   });
 }
 
+var renderSeq = 0;      // סופר ציורים: מי שמחכה יודע אם משהו צויר בינתיים
 function render(){
+  /* ציור מבחוץ באמצע תנועה (סנכרון, עריכה) — קודם מסיימים אותה */
+  if(treeAnim.on && !treeAnim.inside) treeAnim.finish();
   /* כל ציור מחדש הוא סימן שמשהו אולי השתנה. הבדיקה עצמה זולה
      כשאין הפרש, ולכן אפשר לקרוא לה כאן בלי לחשוש. */
   if(typeof scheduleSync === 'function') scheduleSync();
@@ -2828,9 +3190,14 @@ function render(){
   svg.setAttribute('viewBox', '0 0 ' + boardW + ' ' + boardH);
   canvas.style.width  = boardW + 'px';
   canvas.style.height = boardH + 'px';
+  renderSeq++;
   drawLinks();
+  bdToday = new Set(celebrantsToday().map(p => p.id));
   Object.keys(pos).forEach(buildNode);
   buildToggles();
+  /* באמצע תנועה הניצנים לא מצוירים: הם היו עומדים במקום הסופי
+     בזמן שהכרטיסים עוד בדרך. הציור שבסוף התנועה מצייר אותם. */
+  if(!treeAnim.inside) drawSprouts();
   const allK = DB.unions;
   document.getElementById('btnAll').textContent =
     (allK.length && allK.every(u => expanded.has(u.id))) ? 'חזרה לתצוגה שלך' : 'פריסה מלאה';
@@ -2845,12 +3212,19 @@ function render(){
   document.getElementById('brandSub').textContent = !nPeople ? ''
     : plural(totalDepth(), 'דור אחד', 'דורות') + ' · ' +
       plural(nPeople, 'בן משפחה אחד', 'בני משפחה');
+  updateDayLines();
 }
 
 /* פותח בעץ רק את הענפים שדרושים כדי להגיע לאדם מסוים,
    בלי לפרוס שום דבר נוסף מסביבו */
 function revealTo(id){
   if(pos[id]) return false;
+  expandTo(id);
+  layout(); render();
+  return true;
+}
+/* פותח את הענפים שבדרך אל אדם, בלי לצייר */
+function expandTo(id){
   const seen = new Set();
   const walk = (pid, d) => {
     if(!pid || seen.has(pid) || d > 60) return;
@@ -2866,15 +3240,13 @@ function revealTo(id){
     if(mar){ expanded.add(mar.id); walk(spouseIn(mar, pid), d + 1); }
   };
   walk(id, 0);
-  layout(); render();
-  return true;
 }
 
 /* ממסגר קבוצת אנשים במרכז המסך.
    הזום נשאר כמו שהוא, ומתרחק רק אם הקבוצה לא נכנסת. אף פעם לא מתקרב. */
-function frameOn(ids){
+function frameTarget(ids){
   const list = ids.filter(i => pos[i]);
-  if(!list.length) return;
+  if(!list.length) return null;
   const xs = list.map(i => RX(pos[i].x)), ys = list.map(i => pos[i].y);
   const x0 = Math.min(...xs), x1 = Math.max(...xs) + CARD_W;
   const y0 = Math.min(...ys), y1 = Math.max(...ys) + CARD_H;
@@ -2883,10 +3255,13 @@ function frameOn(ids){
   const availW = Math.max(120, innerWidth - 40);
   const availH = Math.max(120, bottom - top);
 
-  scale = Math.max(MIN_S, Math.min(scale, availW/(x1-x0), availH/(y1-y0)));
-  tx = innerWidth/2   - ((x0+x1)/2) * scale;
-  ty = (top+bottom)/2 - ((y0+y1)/2) * scale;
-
+  const s = Math.max(MIN_S, Math.min(scale, availW/(x1-x0), availH/(y1-y0)));
+  return {s, tx: innerWidth/2 - ((x0+x1)/2) * s, ty: (top+bottom)/2 - ((y0+y1)/2) * s};
+}
+function frameOn(ids){
+  const c = frameTarget(ids);
+  if(!c) return;
+  scale = c.s; tx = c.tx; ty = c.ty;
   canvas.style.transition = 'transform .4s cubic-bezier(.3,.7,0,1)';
   apply();
   setTimeout(() => canvas.style.transition = 'none', 420);
@@ -2895,14 +3270,40 @@ function frameOn(ids){
 /* מיקום על המסך של אדם, לצורך שמירת נקודת עוגן */
 const screenOf = id => ({x: RX(pos[id].x)*scale + tx, y: pos[id].y*scale + ty});
 
-/* פורס או סוגר ענף, ומשאיר את נקודת העוגן במקומה על המסך */
+/* אדם חדש שאורח הוסיף (כיוון 2 "ניצן ועלה", דניאל 16.10.2026):
+   הטופס נסגר, חצי שנייה של שקט, המצלמה נוסעת אל המקום של האדם
+   החדש (באותו זום), ורק כשהיא שם הקו צומח אליו והכרטיס נוחת, כמו
+   ב"העץ צומח". בסוף נפתח עליו הניצן.
+   old — הציור לפני ההוספה. אם משהו צויר בזמן ההמתנה (סנכרון, לחיצה)
+   הציור הישן כבר לא נכון, ואז מראים את האדם בלי תנועה. */
+const NEW_PAUSE = 500, NEW_CAM_T = .6;
+function growNew(old, pid, anchor){
+  const seq = renderSeq;
+  setTimeout(() => {
+    if(!DB.people[pid]) return;
+    if(renderSeq !== seq || !old){ revealTo(pid); focusOn(pid); return; }
+    layout();
+    if(!pos[pid]){ expandTo(pid); layout(); }
+    if(!pos[pid]){ render(); return; }
+    const s = scale;
+    const cam = {s, tx: innerWidth / 2 - (RX(pos[pid].x) + CARD_W / 2) * s,
+                    ty: innerHeight * .42 - (pos[pid].y + CARD_H / 2) * s};
+    sproutIntro = pid;
+    treeAnim.start(old, cam, pos[anchor] ? anchor : pid, NEW_CAM_T);
+  }, old ? NEW_PAUSE : 0);
+}
+
+/* פורס או סוגר ענף, ומשאיר את נקודת העוגן במקומה על המסך.
+   עם תנועה: הענף צומח או נאסף (treeAnim). בלי תנועה — מיד. */
 function toggleUnion(uid, side){
   const u = DB.unions.find(x => x.id === uid);
   if(!u) return;
+  if(treeAnim.on) treeAnim.finish();         // לחיצה באמצע תנועה
   side = (side && u.partners.includes(side)) ? side : hostFor(u);
 
   const anchor = u.partners.find(p => pos[p]) || side;
   const before = pos[anchor] ? screenOf(anchor) : null;
+  const old = motionOK() ? treeAnim.snap(true) : null;
 
   let opening;
   if(!expanded.has(uid)){            // סגור — פותחים בצד שנלחץ
@@ -2914,18 +3315,542 @@ function toggleUnion(uid, side){
   }
 
   closeRing(); closeSheet();
-  layout(); render();
+  layout();
 
+  let cam = null;
   if(opening){
     // ממסגרים את מה שצויר כאן בפועל, לא את המיקום המקורי של בן הזוג
     const oc = (u._occ || []).find(o => o.side === hostFor(u)) || (u._occ || [])[0];
-    frameOn(oc ? [oc.a, oc.b, ...u.children].filter(Boolean)
-               : [...u.partners, ...u.children]);
+    cam = frameTarget(oc ? [oc.a, oc.b, ...u.children].filter(Boolean)
+                         : [...u.partners, ...u.children]);
   }
   else if(before && pos[anchor]){
     const after = screenOf(anchor);
-    tx += before.x - after.x;
-    ty += before.y - after.y;
+    cam = {s:scale, tx: tx + before.x - after.x, ty: ty + before.y - after.y};
+  }
+  cam = cam || {s:scale, tx, ty};
+
+  if(old){ treeAnim.start(old, cam, anchor); return; }
+  render();
+  scale = cam.s; tx = cam.tx; ty = cam.ty;
+  if(opening){
+    canvas.style.transition = 'transform .4s cubic-bezier(.3,.7,0,1)';
+    setTimeout(() => canvas.style.transition = 'none', 420);
+  }
+  apply();
+}
+
+/* ============================================================
+   תנועה: "העץ צומח"
+   ההחלטות המלאות — ביומן ההחלטות ובאב-טיפוס demo/נצר-עץ-צומח.html.
+   שלושה שלבים, כל אחד רק אם יש בו משהו:
+   א. נאסף מה שנעלם, על הציור הישן, מלמטה למעלה.
+   ב. מבנה העץ מתחלף: השכנים זזים למקומם החדש והמצלמה מתאימה.
+   ג. צומח מה שנוסף: גזע, קו אופקי, ירידות, ואז הכרטיס.
+   הכל מצויר בלולאה אחת לפי שעון משלה, ולכן אפשר להעמיד אותה
+   על כל רגע (seek) ולבדוק מה רואים בו.
+   ============================================================ */
+/* קצב: 1 — המהירות שאושרה בהתחלה (3000). דניאל ביקש פי 2,
+   בפתיחה ובסגירה (12.10.2026). הכול מתקצר יחד: קווים, כרטיסים,
+   כפתורים, תזוזת השכנים והמצלמה. */
+const TEMPO     = 2;
+const GROW_V    = 3000 * TEMPO;    // פיקסלים לשנייה, בפתיחה ובסגירה
+/* בלי ירוק (דניאל, 12.10.2026). נוסו קצה ירוק בראש הקו, כדור, וענף
+   שנולד ירוק ומשחים — בנצר הקווים קצרים, והירוק כמעט לא הורגש.
+   הקווים צומחים בחום בלבד. */
+const MOVE_T = .42 / TEMPO, CAM_T = .45 / TEMPO,
+      KID_HIDE = .24 / TEMPO, SPOUSE_HIDE = .3 / TEMPO,
+      CARD_IN = .5 / TEMPO, FADE = .2 / TEMPO,
+      TOG_AT = .22 / TEMPO, TOG_IN = .35 / TEMPO;
+
+function motionOK(){
+  return !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/* עקומת cubic-bezier כמו ב-CSS, בחיפוש בינארי */
+function bezier(x1, y1, x2, y2){
+  const B = (u, a, b) => 3*a*u*(1-u)*(1-u) + 3*b*u*u*(1-u) + u*u*u;
+  return t => {
+    if(t <= 0) return 0;
+    if(t >= 1) return 1;
+    let lo = 0, hi = 1, u = t;
+    for(let i = 0; i < 24; i++){
+      u = (lo + hi) / 2;
+      if(B(u, x1, x2) < t) lo = u; else hi = u;
+    }
+    return B(u, y1, y2);
+  };
+}
+const EASE = {
+  ease  : bezier(.25, .1, .25, 1),
+  easeIn: bezier(.42, 0, 1, 1),
+  move  : bezier(.4, 0, .2, 1),
+  kid   : bezier(.3, .8, .25, 1.25),      // נוחת עם הקפצה קלה
+  spouse: bezier(.3, .75, .25, 1),
+  toggle: bezier(.3, .8, .25, 1.4)
+};
+const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+const lerp = (a, b, e) => a + (b - a) * e;
+
+const treeAnim = {
+  on:false, inside:false, manual:false, raf:0,
+
+  /* מה שמצויר עכשיו, במפתחות: כרטיסים, קטעים, כפתורים ומצלמה.
+     לכל דבר גם "זהות": מי הוא ואיפה בעץ הוא תלוי — ילד של איזו
+     זוגיות, או בן זוג של מי, וכך עד השורש. מה שנשאר עם אותה זהות
+     רק זז; מה שזהותו השתנתה נסגר במקום אחד ונפתח במקום אחר, ולא
+     נוסע על המסך. כך גם כרטיס כפיל וכרטיס רגיל של אותו אדם באותו
+     מקום נחשבים אותו כרטיס. */
+  snap(withTogs){
+    const L = linkSegs(), cards = {}, togs = {}, up = {}, ids = {}, segIds = {};
+    Object.keys(pos).forEach(k => { cards[k] = {x: RX(pos[k].x), y: pos[k].y}; });
+    L.occs.forEach(o => {
+      if(o.b) up[o.b] = {o, r:'s'};
+      o.kids.forEach(k => { up[k] = {o, r:'k'}; });
+    });
+    const idOf = (k, depth) => {
+      if(ids[k]) return ids[k];
+      const p = up[k];
+      ids[k] = (KEY[k] || k) + '#' + (!p || depth > 80 ? 'r'
+               : p.r + ':' + p.o.u + '@' + idOf(p.o.a, depth + 1));
+      return ids[k];
+    };
+    Object.keys(cards).forEach(k => idOf(k, 0));
+    L.occs.forEach(o => [...o.couple, ...o.trunk, ...o.bus, ...Object.values(o.drops)]
+      .forEach(k => { segIds[k] = k + '#' + ids[o.a]; }));
+    if(withTogs) nodesEl.querySelectorAll('.toggle').forEach(b => {
+      togs[b.dataset.union + ':' + b.dataset.side + '#' + ids[b.dataset.at]] =
+        {x: parseFloat(b.style.left), y: parseFloat(b.style.top), at: b.dataset.at, el: b};
+    });
+    return {cards, segs: L.segs, occs: L.occs, togs, ids, segIds, cam: {s: scale, tx, ty}};
+  },
+
+  /* camT — זמן נסיעת המצלמה, כשהוא צריך להיות ארוך מהרגיל: באדם
+     חדש המצלמה מגיעה אליו קודם, ורק אחר כך הקו יוצא (growNew). */
+  start(old, cam, anchor, camT){
+    const A = this;
+    A.on = true; A.old = old; A.cam1 = cam; A.anchor = anchor; A.camT = camT || 0;
+    A.ts = {}; A.mv = []; A.mvSeg = []; A.nw = null; A.el = null;
+    scale = cam.s; tx = cam.tx; ty = cam.ty;       // המצב שאליו מגיעים
+    canvas.style.transition = 'none';
+
+    /* שלב א: מה שנעלם, על הציור הישן */
+    const now = A.snap(false);
+    const nowIds = new Set(Object.values(now.ids)), nowSegs = new Set(Object.values(now.segIds));
+    const hide = new Set();
+    Object.keys(old.cards).forEach(k => { if(!nowIds.has(old.ids[k])) hide.add('p:' + k); });
+    Object.keys(old.segs).forEach(k => { if(!nowSegs.has(old.segIds[k])) hide.add('s:' + k); });
+    A.th = retractTimes(old, hide);
+    Object.keys(old.togs).forEach(k => {
+      const c = A.th['p:' + old.togs[k].at];
+      if(c) A.th['g:' + k] = c;
+    });
+    A.TA = endOf(A.th);
+    A.elOld = A.TA ? A.collect(old) : null;
+    A.ready = false;
+    A.t0 = performance.now();
+    if(!A.TA) A.setup();
+    A.frame(0);
+    if(!A.manual && A.on) A.raf = requestAnimationFrame(A.tick);
+  },
+
+  tick(){
+    const A = treeAnim;
+    if(!A.on || A.manual) return;
+    A.frame((performance.now() - A.t0) / 1000);
+    if(A.on) A.raf = requestAnimationFrame(A.tick);
+  },
+
+  /* האלמנטים שעל המסך כרגע, לפי מפתח */
+  collect(S){
+    const cards = {}, segs = {}, togs = {};
+    nodesEl.querySelectorAll('.node').forEach(e => { cards[e.dataset.key] = e; });
+    svg.querySelectorAll('line[data-seg]').forEach(e => { segs[e.getAttribute('data-seg')] = e; });
+    Object.keys(S.togs).forEach(k => { togs[k] = S.togs[k].el; });
+    [...Object.values(cards), ...Object.values(togs)].forEach(e => { e.style.transition = 'none'; });
+    return {cards, segs, togs};
+  },
+
+  /* מעבר לציור החדש: שלבים ב ו-ג */
+  setup(){
+    const A = this, old = A.old;
+    A.inside = true; render(); A.inside = false;
+    A.ready = true;
+    const nw = A.snap(true);
+    A.nw = nw;
+    A.el = A.collect(nw);
+    /* זהות -> מפתח, בציור הישן ובחדש */
+    const inv = m => { const r = {}; Object.keys(m).forEach(k => { r[m[k]] = k; }); return r; };
+    const oldId = inv(old.ids), oldSeg = inv(old.segIds);
+
+    /* המצלמה בתחילת שלב ב: אותו זום, ונקודת העוגן בדיוק במקום
+       שבו הייתה על המסך. כך הרגע הראשון של הציור החדש נראה בדיוק
+       כמו הרגע האחרון של הישן, וכל כרטיס זז ממקומו הישן. */
+    const both = Object.keys(nw.cards).filter(k => oldId[nw.ids[k]] !== undefined);
+    const ak = (old.cards[A.anchor] && nw.cards[A.anchor]) ? A.anchor : both[0];
+    const ako = ak === A.anchor ? ak : oldId[nw.ids[ak]];
+    const o = old.cam;
+    A.cam0 = ak ? {s: o.s,
+                   tx: old.cards[ako].x * o.s + o.tx - nw.cards[ak].x * o.s,
+                   ty: old.cards[ako].y * o.s + o.ty - nw.cards[ak].y * o.s}
+                : {...A.cam1};
+    const map = (x, y) => ({x: (x * o.s + o.tx - A.cam0.tx) / A.cam0.s,
+                            y: (y * o.s + o.ty - A.cam0.ty) / A.cam0.s});
+    let moved = Math.abs(A.cam0.s - A.cam1.s) > .001 ||
+                Math.abs(A.cam0.tx - A.cam1.tx) > 1 || Math.abs(A.cam0.ty - A.cam1.ty) > 1;
+    A.mv = [];
+    const off = (from, to, el) => {
+      if(!el) return;
+      const p = map(from.x, from.y), dx = p.x - to.x, dy = p.y - to.y;
+      if(Math.abs(dx) > .5 || Math.abs(dy) > .5){ moved = true; A.mv.push({el, dx, dy}); }
+    };
+    both.forEach(k => off(old.cards[oldId[nw.ids[k]]], nw.cards[k], A.el.cards[k]));
+    Object.keys(nw.togs).forEach(k => { if(old.togs[k]) off(old.togs[k], nw.togs[k], A.el.togs[k]); });
+    A.mvSeg = [];
+    Object.keys(nw.segs).forEach(k => {
+      const f = old.segs[oldSeg[nw.segIds[k]]];
+      if(!f || !A.el.segs[k]) return;
+      const p1 = map(f.x1, f.y1), p2 = map(f.x2, f.y2), g = nw.segs[k];
+      if([p1.x - g.x1, p1.y - g.y1, p2.x - g.x2, p2.y - g.y2].some(d => Math.abs(d) > .5)){
+        moved = true; A.mvSeg.push({el: A.el.segs[k], from: {x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y}, to: g});
+      }
+    });
+    A.MB = A.camT ? A.camT : moved ? CAM_T : 0;
+
+    /* שלב ג: מה שנוסף */
+    const show = new Set();
+    Object.keys(nw.cards).forEach(k => { if(oldId[nw.ids[k]] === undefined) show.add('p:' + k); });
+    Object.keys(nw.segs).forEach(k => { if(oldSeg[nw.segIds[k]] === undefined) show.add('s:' + k); });
+    A.ts = growTimes(nw, show);
+    Object.keys(nw.togs).forEach(k => {
+      if(old.togs[k]) return;
+      const c = A.ts['p:' + nw.togs[k].at];
+      A.ts['g:' + k] = {d: (c ? c.d : 0) + TOG_AT, dur: TOG_IN};
+    });
+    A.TC = Object.keys(A.ts).length ? endOf(A.ts) : 0;
+
+    /* בן זוג מחליק מאחורי בן המשפחה — בן המשפחה מעליו */
+    nw.occs.forEach(o => {
+      if(!o.b || !show.has('p:' + o.b)) return;
+      if(A.el.cards[o.a]) A.el.cards[o.a].style.zIndex = '2';
+      if(A.el.cards[o.b]) A.el.cards[o.b].style.zIndex = '1';
+    });
+  },
+
+  total(){
+    const A = this;
+    if(!A.on) return 0;
+    return A.TA + (A.ready ? A.MB + A.TC : CAM_T + 10);
+  },
+
+  /* מעמיד את הציור על רגע t (בשניות) מתחילת התנועה */
+  frame(t){
+    const A = this;
+    if(!A.on) return;
+    if(t < A.TA){ A.paintHide(t); return; }
+    if(!A.ready){ A.paintHide(A.TA); A.setup(); }
+    if(t >= A.TA + A.MB + A.TC){ A.finish(); return; }
+    A.paintNew(t - A.TA);
+  },
+
+  paintHide(t){
+    const A = this, old = A.old, el = A.elOld;
+    Object.keys(A.th).forEach(key => {
+      const tm = A.th[key], kind = key.slice(0, 2), k = key.slice(2);
+      if(kind === 's:'){
+        const e = el.segs[k];
+        if(e) dash(e, old.segs[k].len, 1 - clamp01((t - tm.d) / tm.dur));
+      } else if(kind === 'p:'){
+        const e = el.cards[k];
+        if(e) cardAt(e, hiddenPose(old, k), t, tm, false);
+      } else {
+        const e = el.togs[k];
+        if(e) toggleAt(e, t, tm, false);
+      }
+    });
+  },
+
+  paintNew(t){
+    const A = this, nw = A.nw, el = A.el;
+    const c = A.MB ? A.MB : 1, e = EASE.move(clamp01(t / c));
+    canvas.style.transform = 'translate(' + lerp(A.cam0.tx, A.cam1.tx, e) + 'px, ' +
+      lerp(A.cam0.ty, A.cam1.ty, e) + 'px) scale(' + lerp(A.cam0.s, A.cam1.s, e) + ')';
+    syncDots(lerp(A.cam0.tx, A.cam1.tx, e), lerp(A.cam0.ty, A.cam1.ty, e));
+    const em = EASE.move(clamp01(t / MOVE_T));
+    A.mv.forEach(m => {
+      m.el.style.transform = em >= 1 ? '' : 'translate(' + m.dx * (1 - em) + 'px, ' + m.dy * (1 - em) + 'px)';
+    });
+    A.mvSeg.forEach(m => {
+      ['x1', 'y1', 'x2', 'y2'].forEach(a => m.el.setAttribute(a, lerp(m.from[a], m.to[a], em)));
+    });
+    const tg = t - A.MB;
+    Object.keys(A.ts).forEach(key => {
+      const tm = A.ts[key], kind = key.slice(0, 2), k = key.slice(2);
+      if(kind === 's:'){
+        const len = nw.segs[k].len;
+        const q = (tg - tm.d) / tm.dur;
+        if(el.segs[k]) dash(el.segs[k], len, clamp01(q));
+      } else if(kind === 'p:'){
+        if(el.cards[k]) cardAt(el.cards[k], hiddenPose(nw, k), tg, tm, true);
+      } else if(el.togs[k]){
+        toggleAt(el.togs[k], tg, tm, true);
+      }
+    });
+  },
+
+  /* קפיצה לסוף: הציור הסופי, כאילו לא הייתה תנועה */
+  finish(){
+    const A = this;
+    if(!A.on) return;
+    cancelAnimationFrame(A.raf);
+    A.on = false;
+    render();
+    scale = A.cam1.s; tx = A.cam1.tx; ty = A.cam1.ty;
+    canvas.style.transition = 'none';
+    apply();
+  },
+
+  /* לבדיקות: שעון ידני */
+  seek(t){ this.frame(t); }
+};
+
+/* חלק גלוי של קו, מנקודת המוצא שלו: 0 — לא נראה, 1 — כולו */
+function dash(e, len, p){
+  if(p <= 0){ e.setAttribute('visibility', 'hidden'); return; }
+  e.removeAttribute('visibility');
+  if(p >= 1){
+    /* קו אל ממתין חוזר לקווקוו שלו ברגע שסיים לצמוח */
+    if(e.hasAttribute('data-pend')) e.setAttribute('stroke-dasharray', PEND_DASH);
+    else e.removeAttribute('stroke-dasharray');
+    e.removeAttribute('stroke-dashoffset');
+    return;
+  }
+  e.setAttribute('stroke-dasharray', len + ' ' + (len + 4));
+  e.setAttribute('stroke-dashoffset', len * (1 - p));
+}
+
+/* מאיפה כרטיס מגיע ולאן הוא חוזר: בן זוג — מאחורי בן המשפחה;
+   ילד — מלמעלה, קטן */
+function hiddenPose(S, k){
+  const o = S.occs.find(x => x.b === k);
+  if(o && S.cards[o.a]){
+    const dir = S.cards[o.a].x > S.cards[k].x ? 1 : -1;
+    return {x: 52 * dir, y: 0, s: .82, origin: dir > 0 ? '100% 50%' : '0% 50%', ease: EASE.spouse};
+  }
+  return {x: 0, y: -10, s: .45, origin: '50% 0', ease: EASE.kid};
+}
+
+function cardAt(e, h, t, tm, showing){
+  e.style.transformOrigin = h.origin;
+  let k, op;
+  if(showing){
+    if(t < tm.d){ k = 0; op = 0; }
+    else { k = h.ease(clamp01((t - tm.d) / tm.dur)); op = EASE.ease(clamp01((t - tm.d) / FADE)); }
+  } else {
+    if(t < tm.d){ e.style.transform = ''; e.style.opacity = ''; return; }
+    k = 1 - EASE.easeIn(clamp01((t - tm.d) / tm.dur));
+    op = 1 - EASE.ease(clamp01((t - tm.d - tm.dur * .3) / (tm.dur * .7)));
+  }
+  e.style.opacity = op;
+  e.style.transform = 'translate(' + h.x * (1 - k) + 'px, ' + h.y * (1 - k) + 'px) scale(' + lerp(h.s, 1, k) + ')';
+}
+
+function toggleAt(e, t, tm, showing){
+  let k, op;
+  if(showing){
+    k  = t < tm.d ? 0 : EASE.toggle(clamp01((t - tm.d) / tm.dur));
+    op = t < tm.d ? 0 : EASE.ease(clamp01((t - tm.d) / (FADE * 1.25)));
+  } else {
+    if(t < tm.d){ e.style.transform = ''; e.style.opacity = ''; return; }
+    k  = 1 - EASE.easeIn(clamp01((t - tm.d) / FADE));
+    op = 1 - EASE.ease(clamp01((t - tm.d) / (FADE * .75)));
+  }
+  e.style.opacity = op;
+  e.style.transform = 'scale(' + lerp(.3, 1, k) + ')';
+}
+
+const endOf = T => Object.values(T).reduce((m, x) => Math.max(m, x.d + x.dur), 0);
+
+/* כרטיסים שאינם ילד או בן זוג של אף הופעה — מהם הולכים למטה */
+function sceneRoots(S){
+  const below = new Set();
+  S.occs.forEach(o => { if(o.b) below.add(o.b); o.kids.forEach(k => below.add(k)); });
+  return Object.keys(S.cards).filter(k => !below.has(k));
+}
+function occsByCard(S){
+  const m = {};
+  S.occs.forEach(o => (m[o.a] = m[o.a] || []).push(o));
+  return m;
+}
+/* מרחק הירידה של ילד מהגזע, ואורך חצי הקו האופקי שבצד שלו */
+function kidSpan(S, o, k){
+  const kx = S.cards[k].x + CARD_W/2, dx = Math.abs(kx - o.busC);
+  const half = o.bus.length ? S.segs[o.bus[kx <= o.busC ? 0 : 1]].len : 0;
+  return {dx, half};
+}
+
+/* פתיחה: מתי כל דבר חדש מתחיל ולכמה זמן. מה שלא חדש מעביר את
+   הזמן הלאה בלי לעכב. ילדים של אותם הורים נוחתים יחד: שני חצאי
+   הקו האופקי מסיימים יחד, וכל ירידה יוצאת כשהקו עובר מעליה,
+   במהירות משלה, כך שכולן מגיעות באותו רגע. */
+function growTimes(S, show){
+  const v = GROW_V, t = {}, byCard = occsByCard(S);
+  const isNew = k => show.has('s:' + k);
+  const len = k => S.segs[k].len;
+  const runChain = (keys, from, dur) => {
+    const tot = keys.reduce((s, k) => s + len(k), 0);
+    let at = from;
+    keys.forEach(k => {
+      const d = dur !== undefined ? (tot ? dur * len(k) / tot : 0) : len(k) / v;
+      if(isNew(k)) t['s:' + k] = {d: at, dur: Math.max(d, .001)};
+      at += d;
+    });
+    return at;
+  };
+  const walk = (card, tc, cardNew) => {
+    (byCard[card] || []).forEach(o => {
+      const c0 = cardNew ? tc + .12 / TEMPO : tc;
+      let tm = c0;
+      if(o.couple.some(isNew)){
+        const tot = o.couple.reduce((s, k) => s + len(k), 0);
+        runChain(o.couple, c0);
+        tm = c0 + tot / v / 2;
+        if(o.b && show.has('p:' + o.b)){
+          t['p:' + o.b] = {d: c0, dur: CARD_IN};
+          tm = Math.max(tm, c0 + Math.min(.34 / TEMPO, 180 / v));
+        }
+      }
+      if(!o.kids.length) return;
+      const tb = o.trunk.some(isNew) ? runChain(o.trunk, tm) : tm;
+      const busNew = o.bus.some(isNew);
+      const Th = o.bus.length ? Math.max(...o.bus.map(len)) / v : 0;
+      if(busNew) o.bus.forEach(k => { if(isNew(k)) t['s:' + k] = {d: tb, dur: Math.max(Th, .001)}; });
+      o.kids.forEach(k => {
+        const dk = o.drops[k];
+        let td;
+        if(busNew){
+          const {dx, half} = kidSpan(S, o, k);
+          const pass = half > 0 ? tb + Th * dx / half : tb;
+          const arrive = tb + Th + len(dk) / v;
+          if(isNew(dk)) t['s:' + dk] = {d: pass, dur: Math.max(arrive - pass, .001)};
+          td = arrive;
+        } else {
+          td = tb;
+          if(isNew(dk)){ t['s:' + dk] = {d: td, dur: len(dk) / v}; td += len(dk) / v; }
+        }
+        const pn = show.has('p:' + k);
+        if(pn) t['p:' + k] = {d: td, dur: CARD_IN};
+        walk(k, td, pn);
+      });
+    });
+  };
+  sceneRoots(S).forEach(k => walk(k, 0, false));
+  show.forEach(key => { if(!t[key]) t[key] = {d: 0, dur: key[0] === 'p' ? CARD_IN : .001}; });
+  return t;
+}
+
+/* סגירה: מלמטה למעלה. שום דבר לא נעלם לפני מה שתלוי בו — הענף
+   שמתחת לכרטיס, הכרטיס, הירידה שלו, הקו האופקי (מתכווץ אל הגזע
+   בלי לעבור ירידה קיימת), הגזע, ובן הזוג אחרון. כל הילדים יחד. */
+function retractTimes(S, hide){
+  const v = GROW_V, th = {}, byCard = occsByCard(S);
+  const isGone = k => hide.has('s:' + k);
+  const len = k => S.segs[k].len;
+  const R = card => {
+    let end = 0;
+    (byCard[card] || []).forEach(o => {
+      let t0 = 0;
+      if(o.kids.length && o.trunk.some(isGone)){
+        let M = 0;
+        o.kids.forEach(k => { M = Math.max(M, R(k)); });
+        o.kids.forEach(k => { if(hide.has('p:' + k)) th['p:' + k] = {d: M, dur: KID_HIDE}; });
+        const cg = M + KID_HIDE;
+        let outer = 0;
+        o.kids.forEach(k => {
+          const {dx, half} = kidSpan(S, o, k);
+          if(Math.abs(half - dx) < .5) outer = Math.max(outer, len(o.drops[k]) / v);
+        });
+        const tB = cg + outer;
+        const Th = o.bus.length ? Math.max(...o.bus.map(len)) / v : 0;
+        o.kids.forEach(k => {
+          const {dx, half} = kidSpan(S, o, k);
+          const gone = half > 0 ? tB + Th * (half - dx) / half : tB;
+          th['s:' + o.drops[k]] = {d: cg, dur: Math.max(.01, gone - cg)};
+        });
+        o.bus.forEach(k => { th['s:' + k] = {d: tB, dur: Math.max(Th, .001)}; });
+        let at = tB + Th;
+        o.trunk.slice().reverse().forEach(k => {
+          const d = len(k) / v;
+          th['s:' + k] = {d: at, dur: Math.max(d, .001)};
+          at += d;
+        });
+        t0 = at;
+      } else {
+        o.kids.forEach(k => R(k));
+      }
+      if(o.couple.some(isGone)){
+        const tot = o.couple.reduce((s, k) => s + len(k), 0);
+        let at = t0;
+        o.couple.slice().reverse().forEach(k => {
+          const d = tot ? SPOUSE_HIDE * len(k) / tot : SPOUSE_HIDE;
+          th['s:' + k] = {d: at, dur: Math.max(d, .001)};
+          at += d;
+        });
+        if(o.b && hide.has('p:' + o.b)) th['p:' + o.b] = {d: t0, dur: SPOUSE_HIDE};
+        /* בן המשפחה מתחיל להיעלם כשבן הזוג עוד נסגר, כמו בפתיחה,
+           שבה הדור הבא מתחיל לפני שהכרטיס גדל עד הסוף. בן הזוג
+           עדיין נגמר ראשון. בלי החפיפה הזו כל דור הוסיף לסגירה את
+           שני הכרטיסים בזה אחר זה, והסגירה הייתה איטית מהפתיחה. */
+        t0 += SPOUSE_HIDE - KID_HIDE * .9;
+      }
+      end = Math.max(end, t0);
+    });
+    return end;
+  };
+  sceneRoots(S).forEach(R);
+  hide.forEach(key => { if(!th[key]) th[key] = {d: 0, dur: key[0] === 'p' ? KID_HIDE : FADE}; });
+  return th;
+}
+
+/* נגיעה במסך באמצע תנועה — קופצים לסוף, והנגיעה עצמה לא נספרת */
+['pointerdown', 'wheel'].forEach(ev => document.getElementById('viewport').addEventListener(ev, e => {
+  if(!treeAnim.on) return;
+  treeAnim.finish();
+  e.stopPropagation();
+  if(ev === 'pointerdown') e.preventDefault();
+}, {capture:true}));
+
+/* חימום. הפתיחה הראשונה של ענף נתקעה לרגע, אף שכל העץ כבר טעון
+   מהכניסה: בפעם הראשונה הדפדפן עוד מכין את קוד התנועה, והיא
+   לקחה פי 2 מהבאות. לכן, כשהעץ כבר על המסך והדפדפן פנוי, פותחים
+   וסוגרים ענף אחד "על יבש" — בשעון ידני, בתוך משימה אחת, כך
+   שהמסך לא מצויר באמצע — ומחזירים הכול בדיוק כמו שהיה. */
+function warmTreeAnim(){
+  if(ENTRY.busy){ ENTRY.warm = true; return; }   // הכניסה כשורש עוד רצה; החימום יבוא בסופה
+  if(!motionOK() || treeAnim.on) return;
+  if(document.querySelector('#sheet.show, .ring.show, #panel.show')) return;   // המשתמש כבר באמצע משהו
+  const b = nodesEl.querySelector('.toggle:not(.open)');
+  if(!b) return;
+  const uid = b.dataset.union, side = b.dataset.side;
+  const had = Object.prototype.hasOwnProperty.call(hostOf, uid), host = hostOf[uid];
+  const cam = {s: scale, tx, ty}, man = treeAnim.manual;
+  const run = () => {
+    toggleUnion(uid, side);
+    if(!treeAnim.on) return;
+    treeAnim.seek(.02);
+    if(treeAnim.on) treeAnim.seek(treeAnim.TA + .02);
+    treeAnim.seek(99);
+  };
+  treeAnim.manual = true;
+  try { run(); run(); }
+  finally {
+    treeAnim.manual = man;
+    if(treeAnim.on) treeAnim.finish();
+    expanded.delete(uid);
+    if(had) hostOf[uid] = host; else delete hostOf[uid];
+    layout(); render();
+    scale = cam.s; tx = cam.tx; ty = cam.ty;
+    canvas.style.transition = 'none';
     apply();
   }
 }
@@ -2949,6 +3874,15 @@ const MIN_S = .05, MAX_S = 2.2;
 
 function apply(){
   canvas.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  syncDots(tx, ty, canvas.style.transition);
+}
+
+/* הנקודות עוקבות אחרי המצלמה ב-55%. כשהעץ זז בתנועה (מרכוז, חזרה
+   לתצוגה) הנקודות מקבלות את אותה תנועה, אחרת הן היו קופצות. */
+function syncDots(x, y, transition){
+  const m = v => ((v * .55) % 26 + 26) % 26 - 26;
+  dotGrid.style.transition = transition || 'none';
+  dotGrid.style.transform = 'translate(' + m(x) + 'px, ' + m(y) + 'px)';
 }
 
 function center(animate){
@@ -3928,12 +4862,18 @@ function openForm(anchorId, kind){
         pending.push(req);
         /* האדם נשאר על המסך כדי שאפשר יהיה להמשיך לבנות עליו
            בלי להמתין לאישור. זה כל העניין. */
+        if(treeAnim.on) treeAnim.finish();
+        const old = motionOK() ? treeAnim.snap(true) : null;
         addPend(req, req.data);
         draft = null; refreshReqChip(); closePanel();
-        layout(); render(); syncPendBar();
+        syncPendBar();
+        scheduleSync();          // הבקשה יוצאת מיד, גם אם הציור מחכה לתנועה
         toast('נשלח לאישור');
         const last = PENDS[PENDS.length - 1];
-        if(last && DB.people[last.pid]){ revealTo(last.pid); focusOn(last.pid); }
+        if(last && DB.people[last.pid]){
+          if(old) growNew(old, last.pid, req.anchor);
+          else { layout(); render(); revealTo(last.pid); focusOn(last.pid); }
+        } else { layout(); render(); }
         return;
       }
 
@@ -4874,8 +5814,11 @@ function resetViewState(){
    מחדש עשו את אותם חמישה דברים בשני מקומות נפרדים, ודי היה
    בשורה אחת שתישכח באחד מהם כדי שהעץ המוצג והעץ ש"השרת מחזיק"
    יתפצלו — ואז ההשוואה הבאה שולחת בחזרה לשרת את מה שהרגע התקבל. */
-async function adoptServerTree(fresh){
+async function adoptServerTree(fresh, photosLater){
   DB = fresh;
+  /* הטביעה נשאלת כבר עכשיו, במקביל לבירור הממתינים, ולא אחריו.
+     טביעה שנקראה מוקדם מדי לכל היותר גורמת לטעינה שקטה נוספת */
+  const stampP = readStamp();
   /* התאריך העברי מחושב מול שירות חיצוני ונשמר במטמון לפי מזהה
      האדם בלבד. אחרי טעינה מחדש תאריך הלידה יכול להיות אחר, ואז
      המטמון היה מציג חישוב ישן. */
@@ -4894,16 +5837,34 @@ async function adoptServerTree(fresh){
   markSaved(DB, DB.serverRoot);  // מרגע זה כל הפרש ייחשב כשינוי שלנו
   remoteWaiting = false;
   hideRemoteNotice();
-  srvStamp = await readStamp();  // קו פתיחה לזיהוי עדכונים של מנהלים אחרים
-  await attachThumbs(DB);
+  srvStamp = await stampP;       // קו פתיחה לזיהוי עדכונים של מנהלים אחרים
+  if(!photosLater) await attachThumbs(DB);
 }
 
-async function enterTree(){
-  const fresh = await loadTree();
+/* התמונות בכניסה: העץ כבר על המסך, והתמונות נכנסות לכרטיסים
+   כשהן מגיעות. רק הפנים מוחלפים, בלי render: ציור מחדש היה סוגר
+   את מה שהמשתמש אולי כבר פתח */
+async function attachThumbsLater(db){
+  await attachThumbs(db);
+  if(DB !== db) return;          // בינתיים נטען עץ אחר; הוא מביא תמונות משלו
+  nodesEl.querySelectorAll('.node[data-id]').forEach(n => {
+    const p = DB.people[n.dataset.id], face = n.querySelector('.face');
+    if(p && p.thumb && face && !face.querySelector('img')){
+      face.innerHTML = avatarInner(p);
+      if(motionOK()) face.animate([{opacity: 0}, {opacity: 1}], {duration: 250});
+    }
+  });
+}
+
+async function enterTree(treeP){
+  const fresh = await (treeP || loadTree());
   DEMO_PAIR = null;              // אין זוג דמה בעץ אמיתי
   resetViewState();              // מנקה את התור הישן
-  await adoptServerTree(fresh);
+  DB = fresh;                    // adoptServerTree קובע את זה ממילא; כאן כדי שהכניסה תציג את הזוג
+  entryData();
+  await adoptServerTree(fresh, true);
   finishLogin();
+  attachThumbsLater(fresh);
 }
 
 /* החלק המשותף: מה שקורה אחרי שההרשאה נקבעה והעץ מוכן */
@@ -4919,7 +5880,8 @@ function finishLogin(){
   if(!SUPA.enabled){ loadPends(); rebuildPends(); }
   refreshReqChip();
   layout(); render();          // המרחפים מופיעים או נעלמים לפי ההרשאה
-  center(false);
+  if(!entryReady()) center(false);
+  (window.requestIdleCallback || (f => setTimeout(f, 300)))(warmTreeAnim, {timeout: 1500});
   toast(isAdmin() ? 'נכנסת כמנהל' : 'ברוך הבא');
   const pair = DEMO_PAIR;
   if(pair) setTimeout(() => {
@@ -4932,6 +5894,375 @@ function finishLogin(){
           ' — חפשו את הכרטיס עם ↗');
   }, 3000);
 }
+/* ---------- כניסה כשורש ----------
+   בזמן שהאפליקציה מתחברת ומורידה את העץ, אין מסך לוגו. הזוג
+   שבשורש עומד באמצע המסך, ומאחוריו צומח עץ מצויר: שורשים יוצאים
+   מאחורי הכרטיסים ונשזרים לגזע, הגזע מתפצל לענפים, והענפים
+   מתכסים בעלים. בסוף העץ המצויר נמוג והמצלמה עולה למקומה הרגיל.
+
+   הקצב קשור לטעינה האמיתית, אבל בלי לעצור: יש מספר אחד, כמה
+   מהעץ כבר צמח (0 עד 1), והוא זז תמיד קדימה ברכות. כל שלב טעינה
+   שמגיע (חיבור, נתונים, הכול מוכן) מרחיק את היעד; בזמן המתנה
+   היעד ממשיך לזחול לאט. כשהכול מוכן העץ מסתיים בזמן קצר וקבוע,
+   באותה מהירות שבה צמח. טעינה שנגמרת תוך 300ms לא מציגה עץ בכלל.
+
+   לפני שהנתונים הגיעו לא ידוע מי הזוג, ולכן מוצגים שני כרטיסים
+   ריקים. כשהנתונים מגיעים הם מתחלפים בכרטיסים האמיתיים באותו
+   מקום, והשמות מופיעים. נגיעה במסך מקצרת את הסוף. */
+const ENTRY = {busy: false};
+const ENTRY_LV = [.3, .45, .66, 1];      // יעד: לפני חיבור, אחרי חיבור, אחרי נתונים, הכול מוכן
+
+function entryAnim(el, kf, o){
+  const a = el.animate(kf, Object.assign({fill: 'forwards'}, o));
+  ENTRY.anims.push(a);
+  return a;
+}
+
+/* מציב את הזוג כך שמרכזו (בצירי הלוח) יעמוד באמצע המסך לרוחב,
+   ובשני שלישים לגובה: מעליו נשאר מקום לעץ */
+function entryPlace(mx, my){
+  scale = 1;
+  tx = innerWidth / 2 - mx;
+  ty = innerHeight * .66 - my;
+  canvas.style.transition = 'none';
+  apply();
+}
+
+/* הכרטיסים של הזוג שבשורש, מתוך הפריסה הנוכחית */
+function entryCoupleKeys(){
+  if(!pos[DB.root]) return [];
+  const u = DB.unions.find(v => (v._occ || []).some(o => o.a === DB.root));
+  const o = u && u._occ.find(o => o.a === DB.root);
+  return [DB.root, o && o.b].filter(k => k && pos[k]);
+}
+function entryPlaceCouple(keys){
+  const xs = keys.map(k => RX(pos[k].x));
+  entryPlace((Math.min(...xs) + Math.max(...xs) + CARD_W) / 2, pos[keys[0]].y + CARD_H / 2);
+}
+
+function entryStart(connected){
+  if(ENTRY.busy) return;
+  Object.assign(ENTRY, {busy: true, ready: {}, at: {}, skip: false, tree: null,
+                        warm: false, anims: [], p: 0, t0: performance.now()});
+  if(connected) entryStage('connected');
+  loginBox.classList.add('hide');
+  document.body.classList.add('entry-on');
+  svg.innerHTML = '';
+  nodesEl.innerHTML = '';
+  [0, 1].forEach(i => {
+    const el = document.createElement('div');
+    el.className = 'node entry-ph entry-couple';
+    el.dataset.gen = 0;
+    el.style.left = i * (CARD_W + SPOUSE_GAP) + 'px';
+    el.style.top = '0px';
+    el.innerHTML = '<div class="face"></div><div class="sexline"></div><div class="name"><span></span></div>';
+    nodesEl.appendChild(el);
+  });
+  entryPlace(CARD_W + SPOUSE_GAP / 2, CARD_H / 2);
+  requestAnimationFrame(entryStep);
+}
+
+function entryStage(k){
+  if(!ENTRY.busy || ENTRY.ready[k]) return;
+  ENTRY.ready[k] = true;
+  ENTRY.at[k] = performance.now();
+}
+
+/* הנתונים הגיעו (DB כבר העץ החדש): הכרטיסים הריקים מתחלפים בזוג
+   האמיתי באותו מקום, והשמות מופיעים. לא render(): זה היה מפעיל
+   סנכרון מול קו בסיס שעוד לא נקבע */
+function entryData(){
+  if(!ENTRY.busy) return;
+  layout();
+  const keys = entryCoupleKeys();
+  if(keys.length){
+    nodesEl.innerHTML = '';
+    keys.forEach(buildNode);
+    nodesEl.querySelectorAll('.node').forEach(n => n.classList.add('entry-couple'));
+    entryPlaceCouple(keys);
+    nodesEl.querySelectorAll('.node .name span').forEach(n =>
+      entryAnim(n, [{opacity: 0}, {opacity: 1}], {duration: 400}));
+  }
+  else ENTRY.skip = true;           // עץ ריק: אין זוג שממנו יצמח העץ
+  entryStage('data');
+}
+
+/* הכול מוכן והעץ האמיתי צויר. מחזיר true אם הכניסה מטפלת במצלמה */
+function entryReady(){
+  if(!ENTRY.busy) return false;
+  const keys = entryCoupleKeys();
+  keys.forEach(k => nodesEl.querySelectorAll('.node[data-key="' + CSS.escape(k) + '"]')
+    .forEach(n => n.classList.add('entry-couple')));
+  if(keys.length) entryPlaceCouple(keys);
+  entryStage('photos');
+  return true;
+}
+
+/* הטעינה נכשלה: חוזרים למסך הכניסה */
+function entryFail(){
+  if(!ENTRY.busy) return;
+  ENTRY.busy = false;
+  if(ENTRY.tree) ENTRY.tree.remove();
+  ENTRY.tree = null;
+  document.body.classList.remove('entry-on');
+  layout(); render(); center(false);
+  loginBox.classList.remove('hide');
+}
+
+function entryStep(now){
+  const E = ENTRY;
+  if(!E.busy) return;
+  const r = E.ready;
+  if(!E.tree && !E.noTree){
+    /* מהר מאוד, או בלי תנועה: בלי עץ, רק המעבר למקום */
+    if(r.photos || E.skip || !motionOK()) E.noTree = true;
+    else if(now - E.t0 >= 300){
+      const cards = [...nodesEl.querySelectorAll('.entry-couple')];
+      if(!cards.length){ E.noTree = true; requestAnimationFrame(entryStep); return; }
+      E.tree = entryBuildTree(cards);
+      E.last = now; E.target = 0; E.vel = 0; E.fin = null;
+    }
+  }
+  if(E.noTree){
+    if(r.photos){ E.noTree = false; entryEnd(); return; }
+    requestAnimationFrame(entryStep);
+    return;
+  }
+  if(!E.tree){ requestAnimationFrame(entryStep); return; }
+
+  const dt = Math.min(.05, (now - E.last) / 1000);
+  E.last = now;
+  const k = r.photos ? 3 : r.data ? 2 : r.connected ? 1 : 0;
+  const since = (now - (k ? E.at[['', 'connected', 'data', 'photos'][k]] : E.t0)) / 1000;
+  const cap = k === 3 ? 1 : ENTRY_LV[k] + (ENTRY_LV[k + 1] - ENTRY_LV[k]) * .7 * (1 - Math.exp(-since / 3));
+  E.target += (cap - E.target) * (1 - Math.exp(-dt / .5));
+  const prev = E.p;
+  if(E.skip && r.photos) E.p = 1;
+  else if(E.fin){
+    /* מסיימים בזמן קבוע וקצר, ממשיכים מאותה מהירות, בלי האטה ובלי קפיצה */
+    const f = E.fin, u = Math.min(1, (now - f.t) / f.dur), u2 = u * u, u3 = u2 * u;
+    E.p = (2*u3 - 3*u2 + 1) * f.p + (u3 - 2*u2 + u) * f.m + (-2*u3 + 3*u2);
+  }
+  else E.p += Math.min(dt / 1.3, Math.max(0, (E.target - E.p) * (1 - Math.exp(-dt / .22))));
+  if(r.photos && !E.fin && !E.skip){
+    const dur = Math.max(450, Math.min(1100, (1 - E.p) * 1500));
+    E.fin = {t: now, p: E.p, dur, m: Math.min(3 * (1 - E.p), E.vel * dur / 1000)};
+  }
+  E.vel = dt ? (E.p - prev) / dt : E.vel;
+  E.tree.render(E.p);
+  if(r.photos && (E.p > .999 || (E.fin && now - E.fin.t >= E.fin.dur))){
+    E.tree.render(1);
+    setTimeout(entryEnd, E.skip ? 0 : 120);   // רגע קצר שבו רואים את העץ המלא
+  }
+  else requestAnimationFrame(entryStep);
+}
+
+/* המעבר לעץ: המצלמה מחזירה את הזוג למקומו הרגיל, העץ המצויר
+   נע איתו ונמוג, ושאר העץ והכפתורים מופיעים */
+function entryEnd(){
+  const E = ENTRY, s = E.tree, move = motionOK();
+  const before = nodesEl.querySelector('.entry-couple');
+  const b0 = before && before.getBoundingClientRect();
+  document.body.classList.remove('entry-on');
+  nodesEl.querySelectorAll('.entry-couple').forEach(n => n.classList.remove('entry-couple'));
+  center(move);
+  if(move){
+    nodesEl.querySelectorAll('.node').forEach(n => { if(n !== before) entryAnim(n, [{opacity: 0}, {opacity: 1}], {duration: 300}); });
+    entryAnim(svg, [{opacity: 0}, {opacity: 1}], {duration: 300});
+    nodesEl.querySelectorAll('.toggle').forEach(t =>
+      entryAnim(t, [{opacity: 0, transform: 'scale(0)'}, {opacity: 1, transform: 'scale(1)'}],
+        {duration: 260, delay: 350, easing: 'ease-out', fill: 'backwards'}));
+  }
+  if(s && b0 && move){
+    /* לאן הזוג הולך: לפי המצלמה החדשה, לא לפי המסך באמצע התנועה */
+    const k = before.dataset.key, x1 = tx + scale * RX(pos[k].x), y1 = ty + scale * pos[k].y;
+    s.style.transformOrigin = b0.left + 'px ' + b0.top + 'px';
+    entryAnim(s, [{opacity: 1, transform: 'none'},
+                  {opacity: 0, transform: 'translate(' + (x1 - b0.left) + 'px,' + (y1 - b0.top) + 'px) scale(' + scale + ')'}],
+      {duration: 420, easing: 'cubic-bezier(.3,.7,0,1)'});
+  }
+  setTimeout(() => {
+    if(s) s.remove();
+    E.anims.forEach(a => { try { a.cancel(); } catch(_){} });
+    E.tree = null;
+    E.busy = false;
+    if(E.warm) (window.requestIdleCallback || (f => setTimeout(f, 300)))(warmTreeAnim, {timeout: 1500});
+  }, move ? 640 : 0);             // אחרי שהכפתורים סיימו להופיע
+}
+
+/* נגיעה בזמן הכניסה לא מזיזה את הלוח (אין עדיין מה להזיז), ומקצרת את הסוף */
+viewport.addEventListener('pointerdown', e => {
+  if(!ENTRY.busy) return;
+  e.stopImmediatePropagation();
+  ENTRY.skip = true;
+}, true);
+
+/* ----- העץ המצויר -----
+   צורות מלאות שמתחדדות סביב קו מרכזי (גזע אמיתי עבה בבסיס ודק
+   בקצה). כל חלק נחשף דרך מסכה שקו שלה "נמתח" לאורכו, וכל עלה
+   גדל ומסתובב למקומו. המספרים האקראיים קבועים, כדי שהעץ ייראה
+   אותו דבר בכל כניסה. */
+function entryRng(seed){ return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+
+function entryBez(p0, p1, p2, p3, n){
+  const out = [];
+  for(let i = 0; i <= n; i++){
+    const t = i / n, u = 1 - t;
+    out.push([u*u*u*p0[0] + 3*u*u*t*p1[0] + 3*u*t*t*p2[0] + t*t*t*p3[0],
+              u*u*u*p0[1] + 3*u*u*t*p1[1] + 3*u*t*t*p2[1] + t*t*t*p3[1]]);
+  }
+  return out;
+}
+function entryTaper(pts, wf){
+  const L = [], R = [];
+  pts.forEach((p, i) => {
+    const q = pts[Math.min(i + 1, pts.length - 1)], o = pts[Math.max(i - 1, 0)];
+    let dx = q[0] - o[0], dy = q[1] - o[1];
+    const d = Math.hypot(dx, dy) || 1; dx /= d; dy /= d;
+    const w = wf(i / (pts.length - 1)) / 2;
+    L.push([p[0] - dy * w, p[1] + dx * w]); R.push([p[0] + dy * w, p[1] - dx * w]);
+  });
+  const f = a => a.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1));
+  return 'M' + f(L).join(' L') + ' L' + f(R.reverse()).join(' L') + ' Z';
+}
+const entryPath = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+
+function entryBuildTree(cards){
+  const rects = cards.map(c => c.getBoundingClientRect()).sort((p, q) => p.left - q.left);
+  const a = rects[0], b = rects[rects.length - 1];
+  const x = rects.length > 1 ? (a.right + b.left) / 2 : (a.left + a.right) / 2;
+  const y0 = Math.min(a.top, b.top);
+  const H = Math.max(120, Math.min(y0 - 130, 380));
+  const s = document.createElementNS(NS, 'svg');
+  s.id = 'entryTree';
+  const R = entryRng(7), deg = Math.PI / 180;
+  const base = y0 - H * .13;                 // כאן השורשים נבלעים בגזע
+  const fork = y0 - H * .46;                 // כאן הגזע מתפצל
+  const kx = x, ky = y0 - H * .74;           // מרכז הכתר
+  const rx = Math.min(innerWidth / 2 - 12, H * .58), ry = H * .36;   // כתר עגול, לא שטוח
+  const parts = [];       // כל חלק: מסכה, וחלון ההתקדמות שבו הוא צומח
+  let defs = '', body = '', id = 0;
+  const part = (center, shape, from, to, cls, maskW, extra) => {
+    const k = 'eM' + (id++);
+    defs += '<mask id="' + k + '" maskUnits="userSpaceOnUse" x="0" y="0" width="' + innerWidth + '" height="' + innerHeight + '">' +
+      '<path pathLength="1" d="' + entryPath(center) + '" fill="none" stroke="#fff" stroke-width="' + maskW +
+      '" stroke-linecap="butt" stroke-linejoin="round" stroke-dasharray="1 2" stroke-dashoffset="1"/></mask>';
+    body += '<g mask="url(#' + k + ')" class="' + cls + '" style="opacity:0"><path d="' + shape + '"/>' + (extra || '') + '</g>';
+    parts.push({from, to});
+  };
+
+  /* שורשים: כל אחד שונה. יוצאים מאחורי הכרטיסים, מתפתלים כל אחד
+     בדרכו, ונבלעים בבסיס הגזע */
+  const RR = entryRng(11);
+  const rnd = (lo, hi) => lo + RR() * (hi - lo);
+  [[a, .22], [a, .5], [a, .82], [b, .18], [b, .45], [b, .72], [b, .9]].forEach(([c, f]) => {
+    const sx = c.left + c.width * f + rnd(-6, 6), sy = c.top + rnd(16, 34);   // מוסתר מאחורי הכרטיס
+    const ex = x + rnd(-7, 7), ey = base - rnd(4, 16);
+    const up = c.top - rnd(4, 22);
+    const raw = entryBez([sx, sy], [sx + rnd(-10, 10), up], [ex + (sx - ex) * rnd(.15, .45), ey + rnd(4, 24)], [ex, ey], 30);
+    const amp = rnd(1.2, 3.6), fr = rnd(.8, 2.4), ph = rnd(0, 6.283);
+    const pts = raw.map((p, j) => {
+      const t = j / 30, q = raw[Math.min(j + 1, 30)], o = raw[Math.max(j - 1, 0)];
+      const dx = q[0] - o[0], dy = q[1] - o[1], d = Math.hypot(dx, dy) || 1;
+      const w = amp * Math.sin(t * fr * 6.283 + ph) * Math.sin(t * Math.PI);   // התפתלות, אפס בקצוות
+      return [p[0] - dy / d * w, p[1] + dx / d * w];
+    });
+    const w0 = rnd(1.3, 2.5), w1 = rnd(3.4, 6), bulge = rnd(0, 1.4);
+    const st = rnd(0, .07);
+    part(pts, entryTaper(pts, t => w0 + (w1 - w0) * t + bulge * Math.sin(t * Math.PI)), st, st + rnd(.17, .23), 'e-wood', 16);
+  });
+
+  /* הגזע: מתעקל קלות, רחב בבסיס ומצטמצם למעלה, עם שני קווי קליפה */
+  const TN = 30;
+  const tp = entryBez([x, base + 6], [x - 7, base - (base - fork) * .35], [x + 8, base - (base - fork) * .72], [x + 1, fork - 4], TN);
+  const tw = t => 9 + (1 - t) * 10 + Math.pow(1 - t, 5) * 14;
+  const bark = [-.22, .2].map(o => {
+    const bp = tp.slice(2, 22).map((p, i) => [p[0] + o * tw((i + 2) / TN), p[1]]);
+    return '<path d="' + entryPath(bp) + '" fill="none" stroke="rgba(51,40,31,.35)" stroke-width="1"/>';
+  }).join('');
+  /* הגזע נגמר בתוך הזרועות ומתחדד שם, כדי שלא יבלוט מעליהן קצה ישר */
+  const tpc = tp.slice(0, 26);
+  const twc = t => tw(t * 25 / TN) * (1 - .75 * Math.pow(Math.max(0, (t - .75) / .25), 2));
+  part(tpc, entryTaper(tpc, twc), .16, .44, 'e-wood', 60, bark);
+
+  /* ענפים: כל זרוע מתחילה בתוך הגזע וממשיכה את הקו שלו, ורק אז
+     נוטה הצידה, כך שאין תפר ואין זווית בנקודת הפיצול */
+  const tips = [];
+  const tan = (pts, k) => { const q = pts[Math.min(k + 1, pts.length - 1)], o = pts[Math.max(k - 1, 0)]; const dx = q[0] - o[0], dy = q[1] - o[1], d = Math.hypot(dx, dy) || 1; return [dx / d, dy / d]; };
+  [-64, -25, 25, 64].forEach(A => {
+    const outer = Math.abs(A) > 40;
+    const k0 = outer ? 17 : 21;                       // הזרועות החיצוניות יוצאות נמוך יותר
+    const sx0 = tp[k0][0], sy0 = tp[k0][1];
+    const len = H * (outer ? .36 : .4) * (.94 + R() * .12);
+    const ex = sx0 + Math.sin(A * deg) * len * (rx / (H * .5)), ey = sy0 - Math.cos(A * deg) * len;
+    const [ux, uy] = tan(tp, k0);
+    const pts = entryBez([sx0, sy0], [sx0 + ux * len * .32, sy0 + uy * len * .32],
+      [sx0 + (ex - sx0) * .55, sy0 + (ey - sy0) * .72], [ex, ey], 24);
+    const wStart = tw(k0 / TN) * (outer ? .5 : .6);
+    const st = .38 + (outer ? .02 : 0);
+    part(pts, entryTaper(pts, t => wStart - t * (wStart - 2.3)), st, st + .18, 'e-wood', 30);
+    tips.push([ex, ey]);
+    [-26, 26].forEach((dA, j) => {
+      const kk = j ? 16 : 13, p0 = pts[kk];
+      const [vx, vy] = tan(pts, kk);
+      const B = (A + dA) * deg, l2 = H * .18 * (.88 + R() * .24);
+      const sx = p0[0] + Math.sin(B) * l2 * 1.1, sy = p0[1] - Math.cos(B) * l2;
+      const sp = entryBez(p0, [p0[0] + vx * l2 * .35, p0[1] + vy * l2 * .35], [p0[0] + (sx - p0[0]) * .6, p0[1] + (sy - p0[1]) * .8], [sx, sy], 12);
+      const wb = (wStart - (kk / 24) * (wStart - 2.3)) * .7;
+      part(sp, entryTaper(sp, t => wb - t * (wb - 1)), st + .12 + j * .02, st + .24 + j * .02, 'e-wood', 14);
+      tips.push([sx, sy]);
+    });
+  });
+
+  /* עלים: ממלאים כתר עגול באופן אחיד וחופפים זה לזה, ועוד גושים
+     קטנים סביב קצות הענפים. צומחים מהפיצול החוצה */
+  const greens = ['var(--g4)', 'var(--g5)', 'var(--g6)', 'var(--forest)', 'var(--forest-soft)', 'var(--g3)'];
+  const leaves = [];
+  const inCrown = (px, py) => Math.pow(Math.abs(px - kx) / rx, 2.4) + Math.pow(Math.abs(py - ky) / ry, 2.4) <= 1;
+  const add = (lx, ly) => {
+    const sz = (15 + R() * 8) / 16;
+    const rot = Math.atan2(ly - (ky + ry * .5), lx - kx) / deg + 90 + (R() - .5) * 50;
+    leaves.push({x: lx, y: ly, sz, rot, g: greens[Math.floor(R() * greens.length)], d: Math.hypot(lx - x, ly - fork) + R() * 30});
+  };
+  for(let tries = 0; leaves.length < 200 && tries < 20000; tries++){
+    const lx = kx + (R() * 2 - 1) * rx, ly = ky + (R() * 2 - 1) * ry;
+    if(!inCrown(lx, ly)) continue;
+    if(leaves.some(l => Math.hypot(l.x - lx, l.y - ly) < 10.5)) continue;
+    add(lx, ly);
+  }
+  tips.forEach(([t0, t1]) => { for(let j = 0; j < 4; j++){ const r = 18 * Math.sqrt(R()), th = R() * 6.283; add(t0 + Math.cos(th) * r, t1 + Math.sin(th) * r); } });
+  leaves.sort((p, q) => p.d - q.d);
+  leaves.forEach((l, i) => { l.from = .6 + .33 * i / leaves.length; l.to = l.from + .07; });
+  body += leaves.map(l => '<g class="e-leaf" style="visibility:hidden"><path fill="' + l.g + '" d="M0 0 C6 -3 7 -11 0 -17 C-7 -11 -6 -3 0 0 Z"/>' +
+    '<path d="M0 -1 L0 -15" fill="none" stroke="rgba(255,255,255,.28)" stroke-width=".8"/></g>').join('');
+
+  s.innerHTML = '<defs>' + defs + '</defs>' + body;
+  viewport.insertBefore(s, canvas);           // מתחת לכרטיסים: השורשים יוצאים מאחוריהם
+  const masks = [...s.querySelectorAll('mask path')];
+  const groups = [...s.querySelectorAll('g[mask]')];
+  const L = [...s.querySelectorAll('.e-leaf')];
+
+  const ease = t => t * t * (3 - 2 * t);
+  const back = t => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+  s.render = p => {
+    parts.forEach((pt, i) => {
+      const t = Math.max(0, Math.min(1, (p - pt.from) / (pt.to - pt.from)));
+      groups[i].style.opacity = t > 0 ? 1 : 0;           // בלי נקודה לפני שהחלק מתחיל
+      masks[i].setAttribute('stroke-dashoffset', (1 - ease(t)).toFixed(4));
+    });
+    leaves.forEach((l, i) => {
+      const t = Math.max(0, Math.min(1, (p - l.from) / (l.to - l.from)));
+      if(t <= 0){ L[i].style.visibility = 'hidden'; return; }
+      L[i].style.visibility = '';
+      const k = back(t);
+      L[i].setAttribute('transform', 'translate(' + l.x.toFixed(1) + ' ' + l.y.toFixed(1) + ') rotate(' +
+        (l.rot - (1 - t) * 25).toFixed(1) + ') scale(' + (l.sz * k).toFixed(3) + ')');
+    });
+  };
+  s.render(0);
+  return s;
+}
+
 /* ---------- כניסה ---------- */
 async function doLogin(){
   const inp = document.getElementById('loginPass');
@@ -4958,9 +6289,11 @@ async function doLogin(){
     applyFamilyFromServer(r.family);
     saveBrand(r.family);
     btn.textContent = 'טוען את העץ…';
+    entryStart(true);
     await enterTree();
     inp.value = '';
   } catch(e){
+    entryFail();
     saveToken(null);
     err.innerHTML = '<p class="err">' + esc(e.message || 'הכניסה נכשלה') + '</p>';
   } finally {
@@ -4981,15 +6314,22 @@ async function resumeSession(){
   if(!SUPA.enabled || !TOKEN) return false;
   const err = document.getElementById('loginErr');
   err.innerHTML = '<p class="login-note">מתחבר…</p>';
+  entryStart(false);
+  /* העץ נטען במקביל לבדיקת ההרשאה, ולא אחריה: שתיהן נשענות על
+     אותו אסימון, ואם הוא פסול שתיהן נכשלות והעץ פשוט לא בשימוש */
+  const treeP = loadTree();
+  treeP.catch(() => {});
   try {
     const r = await api('/rest/v1/rpc/current_family_role', {method:'POST', body:{}});
     const fam = (typeof r === 'string' ? r : (r && r.current_family_role) || '').trim();
-    if(fam !== 'admin' && fam !== 'guest'){ saveToken(null); err.innerHTML = ''; return false; }
+    if(fam !== 'admin' && fam !== 'guest'){ entryFail(); saveToken(null); err.innerHTML = ''; return false; }
     role = fam;
+    entryStage('connected');
     applyFamilyFromServer(loadBrand());
-    await enterTree();
+    await enterTree(treeP);
     return true;
   } catch(e){
+    entryFail();
     saveToken(null);
     err.innerHTML = '';
     return false;
@@ -5944,12 +7284,13 @@ function normDate(s){
    ספרייה. במסד נשמר תמיד התאריך הלועזי, כמו קודם: העברי הוא רק
    דרך נוספת להזין אותו. היום העברי מחושב לפי היום האזרחי, ולכן
    מי שנולד אחרי השקיעה יקבל יום עברי אחד מוקדם מדי. */
-const HD_FMT = new Intl.DateTimeFormat('en-u-ca-hebrew', {day:'numeric', month:'long', year:'numeric'});
+let HD_FMT = null;   // נבנה בשימוש הראשון, כמו HEB_FMT: לא לעכב את טעינת הדף
 const HD_NAMES = {Tishri:'תשרי', Heshvan:'חשוון', Kislev:'כסלו', Tevet:'טבת', Shevat:'שבט',
   Adar:'אדר', 'Adar I':'אדר א׳', 'Adar II':'אדר ב׳', Nisan:'ניסן', Iyar:'אייר',
   Sivan:'סיוון', Tamuz:'תמוז', Av:'אב', Elul:'אלול'};
 function hdParts(y, m, d){
   const o = {};
+  HD_FMT = HD_FMT || new Intl.DateTimeFormat('en-u-ca-hebrew', {day:'numeric', month:'long', year:'numeric'});
   HD_FMT.formatToParts(new Date(y, m - 1, d, 12)).forEach(p => { o[p.type] = p.value; });
   return {d: Number(o.day), m: o.month, y: Number(o.year)};
 }
@@ -7676,15 +9017,17 @@ function wireIabLock(){
 wireIabLock();
 syncInstallUI();
 
+/* --- הפעלה ראשונה ---
+   לפני הכניסה האוטומטית ולא אחריה: הכניסה מציבה מיד את הזוג
+   באמצע המסך, וציור כאן היה מוחק אותו ומזיז את המצלמה */
+layout();
+render();
+center(false);
+
 /* אם יש אסימון מהפעם הקודמת — נכנסים בלי לשאול סיסמה.
    כאן ולא למעלה: הכניסה בונה מחדש את האנשים הממתינים, והמודול
    שמחזיק אותם מוגדר רק כמה שורות מעל. */
 if(SUPA.enabled) resumeSession();
-
-/* --- הפעלה ראשונה --- */
-layout();
-render();
-center(false);
 
 /* תפריט ההקשר על אזור העץ מבוטל: באנדרואיד זה מה שמונע את
    תפריט התמונה בלחיצה ארוכה, ובמחשב את תפריט הקליק הימני על
