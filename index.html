@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-vUNDeI+5jAr+XmlWRplyRUIIZ0doJPBDWS+CrCA/WsI=';
+  script-src 'sha256-UOXbN3P9ZLbwBYc0yutEAR3B8ACq9VvUqA8rBGp3Ke0=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1472,12 +1472,13 @@ mark{
       <button class="chip" id="btnEditMode">מצב עריכה</button>
       <button class="chip" id="btnExport">גיבוי JSON</button>
       <button class="chip" id="btnImport">ייבוא מגיבוי</button>
+      <button class="chip" id="btnGuestPass">החלפת סיסמת המשפחה</button>
       <input type="file" id="impFile" accept="application/json,.json" hidden>
     </div>
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 22.10.2026 · 01:07</p>
+    <p class="build" id="buildStamp">גרסה 22.10.2026 · 22:13</p>
   </div>
 </header>
 
@@ -1720,6 +1721,11 @@ const SERVER_MSG = [
   ['request_shape',          'בבקשה חסר האדם שאליו היא מתייחסת'],
   ['row-level security',     'אין הרשאה לפעולה הזאת'],
   ['duplicate key',          'הרשומה הזאת כבר קיימת'],
+  ['not_admin',              'רק מנהל יכול להחליף את סיסמת המשפחה'],
+  ['password_too_short',     'הסיסמה קצרה מדי. צריך לפחות 6 תווים'],
+  ['password_too_long',      'הסיסמה ארוכה מדי'],
+  ['same_as_admin',          'זו סיסמת המנהל. סיסמת המשפחה חייבת להיות שונה ממנה'],
+  ['same_as_old',            'זו כבר סיסמת המשפחה הנוכחית'],
   ['server_error',           'השרת נתקל בתקלה. נסו שוב בעוד רגע'],
   ['bad_request',            'הבקשה לא נשלחה כראוי. נסו שוב'],
 ];
@@ -2349,15 +2355,26 @@ async function loadTree(){
   /* השורש נשאל מהשרת ולא מהעותק השמור. בכניסה אוטומטית העותק
      הוא מלפני כניסה קודמת, ושורש שנקבע מאז לא היה מופיע בו —
      ואז האפליקציה הייתה שולחת אותו מחדש בכל טעינה. */
-  const [people, unions, notes, fam, reqs] = await Promise.all([
+  const [people, unions, notes, fam, reqs, who] = await Promise.all([
     restAll('people',  'select=*'),
     restAll('unions',  'select=*'),
     restAll('notes',   'select=*'),
     rest('families','select=id,root_person_id&limit=1').catch(() => null),
     /* משתמש רגיל אינו רשאי לראות את התור, והשרת מחזיר לו ריק.
        זה תקין — הוא שולח בקשות אבל לא רואה אותן. */
-    restAll('requests','select=*').catch(() => [])
+    restAll('requests','select=*').catch(() => []),
+    api('/rest/v1/rpc/current_family_role', {method:'POST', body:{}}).catch(() => null)
   ]);
+  /* אסימון שנמחק בשרת (החלפת סיסמת המשפחה מנתקת את כל האורחים,
+     ואסימון שעבר 30 יום) אינו מחזיר 401. הגנת השורות פשוט מסתירה
+     הכול, והתשובה נראית כמו עץ ריק. בלי הבדיקה הזאת האורח שנותק
+     היה רואה את העץ נעלם, עם ההודעה "העץ עודכן על ידי מנהל אחר".
+     רק מחרוזת ריקה היא "לא מחובר"; כל תשובה אחרת אינה מכריעה. */
+  if(who === ''){
+    const e = new Error('ההרשאה פגה. יש להיכנס מחדש');
+    e.auth = true;
+    throw e;
+  }
   const famRow = Array.isArray(fam) ? fam[0] : null;
   if(famRow){
     if(famRow.id) FAMILY_ID = famRow.id;
@@ -5742,7 +5759,7 @@ refreshReqChip();
    טוקן, ומדיניות RLS חוסמת גישה לנתונים בלעדיו. כל שאר המסכים
    כאן — ההרשאות, הטפסים, כלי המנהל — נשארים כמו שהם.
    ============================================================ */
-const PASS_GUEST = FAMILY.passGuest;
+let PASS_GUEST = FAMILY.passGuest;     // let: במצב דמה אפשר להחליף אותה
 const PASS_ADMIN = FAMILY.passAdmin;
 
 const loginBox = document.getElementById('login');
@@ -7224,6 +7241,121 @@ document.getElementById('impFile').onchange = () => {
 applyRole();
 
 
+/* ---------- החלפת סיסמת המשפחה ----------
+   סיסמת האורח עוברת מיד ליד, ואין דרך לדעת למי הגיעה. כניסה
+   פתוחה נשמרת 30 יום, ולכן החלפת הסיסמה לבדה לא מוציאה את מי
+   שכבר בפנים. השרת עושה את שניהם יחד: סיסמה חדשה, ומחיקת כל
+   הכניסות הפתוחות של אורחים (migrations/החלפת-סיסמת-אורח.sql).
+   כניסות המנהלים וסיסמת המנהל לא משתנות.
+   הבדיקות שבשרת הן הקובעות. אלה כאן רק חוסכות נסיעה אליו. */
+const GP_MIN = 6;
+function guestPassProblem(v){
+  if(v.length < GP_MIN) return 'הסיסמה קצרה מדי. צריך לפחות ' + GP_MIN + ' תווים';
+  if(new TextEncoder().encode(v).length > 72) return 'הסיסמה ארוכה מדי';
+  return '';
+}
+
+function openGuestPassPanel(){
+  openPanel('החלפת סיסמת המשפחה', `
+    <p class="imp-note">הסיסמה החדשה תחליף את הישנה. כל מי שנכנס עם סיסמת
+      המשפחה ינותק מיד, ויצטרך להקליד את החדשה. המנהלים נשארים מחוברים,
+      וסיסמת המנהל לא משתנה.</p>
+    <div class="field">
+      <label for="gpNew">הסיסמה החדשה</label>
+      <input id="gpNew" autocomplete="off" autocapitalize="off" spellcheck="false"
+        placeholder="לפחות ${GP_MIN} תווים">
+      <p class="err" id="gpErr" hidden></p>
+    </div>
+    <div id="gpActions" class="form-actions">
+      <button class="btn btn-primary" id="gpGo">החלפה</button>
+      <button class="btn btn-ghost" id="gpNo">ביטול</button>
+    </div>`,
+  () => {
+    const g = id => panelBody.querySelector('#' + id);
+    const say = t => { g('gpErr').textContent = t; g('gpErr').hidden = !t; };
+    g('gpNo').onclick = closePanel;
+    g('gpGo').onclick = () => {
+      const v = (g('gpNew').value || '').trim();
+      const bad = guestPassProblem(v);
+      if(bad){ say(bad); return; }
+      say('');
+      g('gpNew').readOnly = true;
+      /* אישור כפול, כמו בכל פעולה שאינה ניתנת לביטול */
+      panelBody.classList.add('confirming');
+      g('gpActions').innerHTML =
+        '<div style="width:100%"><p class="err" style="color:var(--ink)">' +
+        'כל האורחים ינותקו עכשיו. להחליף את הסיסמה?</p>' +
+        '<div class="form-actions">' +
+        '<button class="btn btn-primary" id="gpYes">כן, להחליף</button>' +
+        '<button class="btn btn-ghost" id="gpNope">לא</button></div></div>';
+      g('gpNope').onclick = openGuestPassPanel;
+      g('gpYes').onclick = async () => {
+        const yes = g('gpYes');
+        yes.disabled = true; yes.textContent = 'מחליף…';
+        let cut;
+        try { cut = await changeGuestPass(v); }
+        catch(e){
+          if(!panelBody.querySelector('#gpYes')) return;  // הלוח נסגר בינתיים
+          panelBody.classList.remove('confirming');
+          g('gpNew').readOnly = false;
+          say((e && e.message) || 'ההחלפה נכשלה. נסו שוב');
+          g('gpActions').innerHTML =
+            '<button class="btn btn-primary" id="gpGo2">החלפה</button>' +
+            '<button class="btn btn-ghost" id="gpNo2">ביטול</button>';
+          g('gpGo2').onclick = () => { openGuestPassPanel(); panelBody.querySelector('#gpNew').value = v; };
+          g('gpNo2').onclick = closePanel;
+          return;
+        }
+        panelBody.classList.remove('confirming');
+        showGuestPassDone(v, cut);
+      };
+    };
+  });
+}
+
+/* מחזיר כמה כניסות של אורחים נותקו */
+async function changeGuestPass(v){
+  if(!SUPA.enabled){ PASS_GUEST = v; return 0; }
+  const r = await api('/rest/v1/rpc/change_guest_password',
+                      {method:'POST', body:{p_new: v}});
+  return typeof r === 'number' ? r : 0;
+}
+
+function showGuestPassDone(v, cut){
+  openPanel('החלפת סיסמת המשפחה', `
+    <div class="form-head">
+      <b>הסיסמה הוחלפה</b>
+      <span>${cut ? plural(cut, 'כניסה אחת של אורח נותקה', 'כניסות של אורחים נותקו')
+                  : 'לא היו אורחים מחוברים'}</span>
+    </div>
+    <div class="field">
+      <label>סיסמת המשפחה החדשה</label>
+      <input id="gpShow" readonly value="${esc(v)}">
+    </div>
+    <p class="imp-note">שלחו אותה רק למי שצריך. מי שינסה את הישנה יקבל "סיסמה שגויה".</p>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="gpCopy">העתקה</button>
+      <button class="btn btn-ghost" id="gpDone">סגירה</button>
+    </div>`,
+  () => {
+    const g = id => panelBody.querySelector('#' + id);
+    g('gpDone').onclick = closePanel;
+    g('gpCopy').onclick = () => {
+      const t = g('gpShow').value;
+      if(navigator.clipboard && navigator.clipboard.writeText)
+        navigator.clipboard.writeText(t).then(() => toast('הסיסמה הועתקה'),
+                                              () => toast('לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ביד'));
+      else toast('לא הצלחתי להעתיק. אפשר לסמן ולהעתיק ביד');
+    };
+  });
+}
+
+document.getElementById('btnGuestPass').onclick = () => {
+  if(!isAdmin()) return;
+  closeMore();
+  openGuestPassPanel();
+};
+
 /* ============================================================
    מודול 10 — טופס אדם משותף, מצב עריכה, ובקשות עריכה
    ============================================================ */
@@ -8687,6 +8819,7 @@ async function refreshFromServer(){
     layout(); render();
     return true;
   } catch(e){
+    if(e && e.auth) onAuthLost();
     return false;   /* רענון שנכשל אינו מפיל כלום — נשארים עם מה שיש */
   }
 }
