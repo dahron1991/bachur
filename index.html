@@ -10,7 +10,7 @@
      רץ. בקובץ הפיתוח הסמן נשאר, כי הטביעה משתנה בכל עריכה. -->
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
-  script-src 'sha256-UOXbN3P9ZLbwBYc0yutEAR3B8ACq9VvUqA8rBGp3Ke0=';
+  script-src 'sha256-xzIrMR2a7wONTT3d2iQyj93k4V4xo144YwBVXt5ZpEY=';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src https://fonts.gstatic.com;
   img-src 'self' data: https://dahron1991.github.io https://qmmkalmixlsibfktdncq.supabase.co;
@@ -1478,7 +1478,7 @@ mark{
     <!-- חותמת הגרסה. בלי זה אי אפשר לדעת אם מה שפתוח בטלפון הוא
          באמת מה שהועלה, או עותק ישן מהמטמון — ושאלה כזאת עולה
          אחרי כל עדכון. build-prod כותב כאן את מועד הבנייה. -->
-    <p class="build" id="buildStamp">גרסה 22.10.2026 · 22:13</p>
+    <p class="build" id="buildStamp">גרסה 22.10.2026 · 22:40</p>
   </div>
 </header>
 
@@ -3915,9 +3915,21 @@ function center(animate){
 const pointers = new Map();
 let lastMid = null, lastDist = 0;
 
+/* שתי נגיעות מהירות על הרקע = מרכוז, אבל רק בשיטוט נקי: שום חלון,
+   טבעת או תפריט לא פתוחים כשהאצבע יורדת. נגיעה שסוגרת משהו אינה
+   נספרת. גרירה, צביטה או החזקה ארוכה מבטלות את הספירה. */
+const DBL_MS = 350, TAP_MS = 300, TAP_TOL = 12, DBL_TOL = 40;
+let bgTap = null, lastTap = null;
+const quietTree = () => !ringOwner && moreMenu.hidden &&
+  !sheet.classList.contains('show') && !panel.classList.contains('show');
+
 viewport.addEventListener('pointerdown', e => {
-  if(e.target.closest('.act, .toggle')) return;          // כפתורי ההוספה מטפלים בעצמם
-  if(pointers.size === 0) panFromBg = !e.target.closest('.node');
+  if(e.target.closest('.act, .toggle')){ bgTap = lastTap = null; return; }   // כפתורי ההוספה מטפלים בעצמם
+  if(pointers.size === 0){
+    panFromBg = !e.target.closest('.node');
+    bgTap = panFromBg && quietTree() ? {id:e.pointerId, x:e.clientX, y:e.clientY, t:e.timeStamp} : null;
+    if(!bgTap) lastTap = null;
+  } else bgTap = lastTap = null;                       // אצבע שנייה = צביטה
   pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
   viewport.classList.add('grabbing');
   if(pointers.size === 2){ initPinch(); cancelPress(); }
@@ -3927,6 +3939,7 @@ addEventListener('pointermove', e => {
   if(!pointers.has(e.pointerId)) return;
   const prev = pointers.get(e.pointerId);
   pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(bgTap && Math.hypot(e.clientX-bgTap.x, e.clientY-bgTap.y) > TAP_TOL) bgTap = lastTap = null;
 
   if(pointers.size === 1){
     if(!panFromBg) return;        // אצבע שירדה על כרטיס לא מזיזה את המפה
@@ -3948,6 +3961,14 @@ addEventListener('pointermove', e => {
 
 ['pointerup','pointercancel'].forEach(ev =>
   addEventListener(ev, e => {
+    if(bgTap && bgTap.id === e.pointerId){
+      const tap = ev === 'pointerup' && e.timeStamp - bgTap.t < TAP_MS ? bgTap : null;
+      bgTap = null;
+      if(tap && lastTap && tap.t - lastTap.t < DBL_MS &&
+         Math.hypot(tap.x-lastTap.x, tap.y-lastTap.y) < DBL_TOL){
+        lastTap = null; center(true);
+      } else lastTap = tap;
+    }
     pointers.delete(e.pointerId);
     if(pointers.size < 2) lastDist = 0;
     if(pointers.size === 2) initPinch();
